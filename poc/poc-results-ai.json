@@ -1,0 +1,142 @@
+{
+  "gemini": [
+    {
+      "sample": "Phong cách kỹ thuật - trực tiếp",
+      "success": true,
+      "jsonValid": true,
+      "schemaValid": true,
+      "schemaErrors": [],
+      "parsed": {
+        "tone": [
+          "trực tiếp",
+          "thực tế",
+          "chiến lược",
+          "giàu kinh nghiệm",
+          "khuyên răn"
+        ],
+        "sentence_style": "varied",
+        "avg_sentence_length": 15.9,
+        "signature_phrases": [
+          "Thứ nhất:",
+          "Thứ hai:",
+          "Thứ ba:",
+          "bài học đắt giá",
+          "Nói thẳng ra:"
+        ],
+        "topics": [
+          "chiến lược marketing",
+          "phát triển sản phẩm",
+          "sáng tạo nội dung",
+          "tăng trưởng kinh doanh",
+          "bài học kinh nghiệm"
+        ],
+        "avoid": [
+          "ngôn ngữ hoa mỹ, phức tạp",
+          "thiếu cấu trúc rõ ràng",
+          "không đưa ra kết luận cụ thể",
+          "thiếu sự trực diện"
+        ]
+      },
+      "elapsed": 7615,
+      "rawResponse": "{\n  \"tone\": [\"trực tiếp\", \"thực tế\", \"chiến lược\", \"giàu kinh nghiệm\", \"khuyên răn\"],\n  \"sentence_style\": \"varied\",\n  \"avg_sentence_length\": 15.9,\n  \"signature_phrases\": [\"Thứ nhất:\", \"Thứ hai:\", \"Thứ ba:\", \"bài học đắt giá\", \"Nói thẳng ra:\"],\n  \"topics\": [\"chiến lược marketing\", \"phát triển sản phẩm\", \"sáng tạo nội dung\", \"tăng trưởng kinh doanh\", \"bài học kinh nghiệm\"],\n  \"avoid\": [\"ngôn ngữ hoa mỹ, phức tạp\", \"thiếu cấu trúc rõ ràng\", \"không đưa ra kết luận cụ thể\", \"thiếu sự trực diện\"]\n}"
+    },
+    {
+      "sample": "Phong cách kể chuyện - gần gũi",
+      "success": true,
+      "jsonValid": true,
+      "schemaValid": true,
+      "schemaErrors": [],
+      "parsed": {
+        "tone": [
+          "tự sự",
+          "chân thật",
+          "giáo huấn",
+          "thân mật",
+          "khuyến khích"
+        ],
+        "sentence_style": "varied",
+        "avg_sentence_length": 9,
+        "signature_phrases": [
+          "thực tế phũ phàng hơn nhiều",
+          "sản phẩm tốt không tự bán được",
+          "hành trình thật",
+          "authenticity beats perfection",
+          "những thất bại, những bài học"
+        ],
+        "topics": [
+          "khởi nghiệp",
+          "tiếp thị nội dung",
+          "bài học kinh nghiệm",
+          "sự chân thật",
+          "phát triển sản phẩm"
+        ],
+        "avoid": [
+          "ngôn ngữ quá học thuật hoặc chuyên môn sâu",
+          "giọng điệu khô khan, thiếu cảm xúc cá nhân",
+          "sử dụng cấu trúc câu phức tạp, dài dòng",
+          "quảng cáo trực tiếp, tập trung vào tính năng sản phẩm"
+        ]
+      },
+      "elapsed": 9950,
+      "rawResponse": "{\n  \"tone\": [\"tự sự\", \"chân thật\", \"giáo huấn\", \"thân mật\", \"khuyến khích\"],\n  \"sentence_style\": \"varied\",\n  \"avg_sentence_length\": 9,\n  \"signature_phrases\": [\n    \"thực tế phũ phàng hơn nhiều\",\n    \"sản phẩm tốt không tự bán được\",\n    \"hành trình thật\",\n    \"authenticity beats perfection\",\n    \"những thất bại, những bài học\"\n  ],\n  \"topics\": [\n    \"khởi nghiệp\",\n    \"tiếp thị nội dung\",\n    \"bài học kinh nghiệm\",\n    \"sự chân thật\",\n    \"phát triển sản phẩm\"\n  ],\n  \"avoid\": [\n    \"ngôn ngữ quá"
+    },
+    {
+      "sample": "Phong cách học thuật - chuyên sâu (English)",
+      "success": true,
+      "jsonValid": true,
+      "schemaValid": true,
+      "schemaErrors": [],
+      "parsed": {
+        "tone": [
+          "Informative",
+          "Analytical",
+          "Confident",
+          "Professional",
+          "Direct"
+        ],
+        "sentence_style": "varied",
+        "avg_sentence_length": 18,
+        "signature_phrases": [
+          "voice consistency",
+          "voice profile",
+          "prompt engineering",
+          "system prompt",
+          "JSON-based voice profile schema"
+        ],
+        "topics": [
+          "AI-powered content tools",
+          "Voice consistency in AI output",
+          "Amplify's solution",
+          "Prompt engineering",
+          "Technical implementation of voice profiles"
+        ],
+        "avoid": [
+          "Informal language",
+          "Emotional appeals",
+          "Vague generalizations",
+          "Unnecessary jargon (beyond technical terms)"
+        ]
+      },
+      "elapsed": 6334,
+      "rawResponse": "{\n  \"tone\": [\"Informative\", \"Analytical\", \"Confident\", \"Professional\", \"Direct\"],\n  \"sentence_style\": \"varied\",\n  \"avg_sentence_length\": 18,\n  \"signature_phrases\": [\n    \"voice consistency\",\n    \"voice profile\",\n    \"prompt engineering\",\n    \"system prompt\",\n    \"JSON-based voice profile schema\"\n  ],\n  \"topics\": [\n    \"AI-powered content tools\",\n    \"Voice consistency in AI output\",\n    \"Amplify's solution\",\n    \"Prompt engineering\",\n    \"Technical implementation of voice profiles\"\n  ],\n  \"avoid"
+    }
+  ],
+  "deepseek": [
+    {
+      "sample": "Phong cách kỹ thuật - trực tiếp",
+      "success": false,
+      "error": "402 Insufficient Balance"
+    },
+    {
+      "sample": "Phong cách kể chuyện - gần gũi",
+      "success": false,
+      "error": "402 Insufficient Balance"
+    },
+    {
+      "sample": "Phong cách học thuật - chuyên sâu (English)",
+      "success": false,
+      "error": "402 Insufficient Balance"
+    }
+  ],
+  "timestamp": "2026-05-16T20:43:45.854Z"
+}

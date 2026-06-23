@@ -1,0 +1,320 @@
+1. Nhập liệu & Xây dựng Hồ sơ Thương hiệu (Brand Onboarding)
+Nhập URL/Trang web tự động
+
+Cho phép người dùng chỉ cần dán URL trang chủ, AI sẽ tự động thu thập toàn bộ nội dung, cấu trúc trang và từ khóa để xây dựng hồ sơ thương hiệu ban đầu.
+
+Tải lên Tài liệu Đa định dạng
+
+Hỗ trợ kéo-thả hàng loạt file PDF, Word, PPT, Markdown, sổ tay thương hiệu (brand guideline) hiện có để AI học tập và trích xuất giọng điệu.
+
+Kết nối Kho nội dung Đám mây
+
+Tích hợp trực tiếp với Google Drive, Dropbox, Notion để đồng bộ hóa và tự động quét mọi tài liệu sản phẩm, blog cũ, báo cáo nội bộ làm dữ liệu đầu vào.
+
+Nhập nội dung từ URL Bài viết/Blog
+
+Cho phép dán một hoặc nhiều URL bài blog dài, bài guest post để hệ thống phân tích phong cách viết đặc trưng của tác giả.
+
+Nhập Dữ liệu Nghe nhìn (Podcast/Webinar)
+
+Tải lên file audio/video hoặc dán link YouTube/podcast, AI sẽ tự động phiên âm, phân tích giọng điệu nói và biến nó thành một phần của hồ sơ ngôn ngữ.
+
+Kết nối Nguồn dữ liệu Khách hàng (CRM/Email)
+
+Tích hợp API với HubSpot, Salesforce để phân tích ngôn ngữ trong email chốt sale, tư vấn khách hàng, nhằm nắm bắt cách giao tiếp thực tế.
+
+Trình hướng dẫn Khởi tạo Nhanh (Onboarding Wizard)
+
+Một giao diện hỏi-đáp đơn giản (ngành nghề, đối tượng mục tiêu, giá trị cốt lõi, từ cấm kỵ) trong 3 phút cho người mới bắt đầu chưa có sẵn tài liệu.
+
+Tự động Phân loại & Gắn thẻ Tài sản
+
+AI tự động gắn thẻ các tài liệu đã tải lên theo chủ đề, giai đoạn kênh (TOFU/MOFU/BOFU), và tính năng sản phẩm được nhắc đến.
+
+2. Quản lý & Tối ưu hóa Tiếng nói Thương hiệu (Brand Voice Management)
+Bộ nhớ Thương hiệu Vĩnh cửu (Persistent Brand Vault)
+
+Kho lưu trữ trung tâm nơi mọi chỉ thị, giọng điệu, từ vựng đặc trưng được ghi nhớ vĩnh viễn, xóa bỏ hoàn toàn việc phải "nhắc lại" bối cảnh cho AI mỗi lần sử dụng.
+
+Mô hình hóa Giọng điệu Đa Chiều
+
+Phân tích và tạo ra bản đồ giọng điệu dựa trên 4 trục: Hài hước - Nghiêm túc, Đại trà - Chuyên sâu, Thân mật - Trang trọng, Táo bạo - Thận trọng.
+
+Từ điển Từ vựng Độc quyền & Cấm kỵ
+
+Tự động liệt kê các thuật ngữ chuyên ngành "chữ ký" mà thương hiệu hay dùng và danh sách "từ rác" cần tuyệt đối tránh.
+
+Quản lý Đa Hồ sơ Thương hiệu (Multi-Brand Vault)
+
+Cho phép chuyển đổi nhanh giữa các bộ nhớ thương hiệu khác nhau cho các sản phẩm hoặc chiến dịch khác nhau trong cùng một tài khoản.
+
+Chỉ số Sức khỏe Giọng điệu (Brand Voice Health Score)
+
+Chấm điểm sự nhất quán của nội dung đầu ra so với hồ sơ gốc, cảnh báo khi nội dung bắt đầu bị "loãng" hoặc "lệch pha" thương hiệu.
+
+Cập nhật & Tiến hóa Giọng điệu Theo thời gian
+
+AI học hỏi từ các chỉnh sửa thủ công của người dùng và các bài đăng đạt tương tác cao để tự động tinh chỉnh và cập nhật bộ nhớ thương hiệu.
+
+Phát hiện & Chặn Nội dung Đại trà (Fluff Detector)
+
+Tích hợp cơ chế tự động chấm điểm và đánh dấu các cụm từ vô thưởng vô phạt, sáo rỗng, đe dọa làm xói mòn bản sắc thương hiệu trước khi xuất bản.
+
+3. Tạo & Tái chế Nội dung Đa kênh (Content Repurposing & Generation)
+Cỗ máy Tái chế Điểm chạm Đơn (Single-Input Repurposing)
+
+Từ một bài blog, video, podcast hay tài liệu gốc, AI tự động phân rã thành hàng chục bài đăng nhỏ cho các kênh khác nhau chỉ bằng một cú nhấp chuột.
+
+Chuyển đổi Định dạng Thông minh (Smart Format Translation)
+
+Tự động "dịch" cấu trúc một luận điểm: từ một câu trong blog thành một chuỗi tweet, một bài post chuyên sâu trên LinkedIn, một kịch bản TikTok, và một bài thảo luận trên Reddit.
+
+Tạo bài đăng từ Dự thảo Tính năng Sản phẩm
+
+Nhập đoạn mô tả tính năng kỹ thuật thô, AI sẽ biến nó thành thông báo ra mắt, bài post lợi ích cho người dùng cuối, và hướng dẫn sử dụng nhanh.
+
+Tự động tạo Chuỗi bài (Content Series & Threads)
+
+Phân tích một chủ đề lớn và lên lịch tự động một chuỗi bài đăng nhiều phần có logic liền mạch trên Twitter/LinkedIn.
+
+Trình tạo Ý tưởng Nội dung Bất tận
+
+Nhập vài từ khóa, AI đề xuất hàng trăm ý tưởng tiêu đề, góc nhìn mới lạ, và câu hỏi gây tranh luận dựa trên phân tích xu hướng thị trường ngách.
+
+Kho Mẫu (Template Library) Tùy biến Sâu
+
+Cung cấp hàng trăm mẫu nội dung cho SaaS (bài so sánh, bài hướng dẫn, case study, battle card) có khả năng tự động điền đầy bằng bối cảnh thương hiệu.
+
+Tạo Hình ảnh & Đồ họa Đi kèm bằng AI
+
+Tự động sinh ra ảnh minh họa, biểu đồ, infographic và meme phù hợp với nội dung bài đăng, đồng bộ với nhận diện thương hiệu.
+
+Tạo Video Ngắn (Short-form Video Generator)
+
+Từ một bài đăng văn bản, tự động tạo video với giọng nói AI, hình ảnh stock/ảnh sinh và hiệu ứng chữ cho TikTok/Reels/Shorts.
+
+Tái chế Đa Ngôn ngữ (Multi-language Repurposing)
+
+Tự động dịch và nội địa hóa toàn bộ chuỗi nội dung sang nhiều thứ tiếng, vẫn giữ nguyên giọng điệu thương hiệu, để phủ sóng thị trường toàn cầu.
+
+4. Tùy chỉnh & Kiểm soát Nội dung (Customization & Human-in-the-Loop)
+Giao diện Kiểm duyệt Tập trung (Unified Review Dashboard)
+
+Một bảng điều khiển duy nhất hiển thị tất cả bản nháp dưới dạng xem trước chính xác định dạng của kênh đích (LinkedIn, X, v.v.).
+
+Trình soạn thảo Trực tiếp với Gợi ý AI Động
+
+Khi người dùng chỉnh sửa một câu, AI lập tức đề xuất 3-5 biến thể khác nhau cho chính câu đó, ưu tiên sự đa dạng về sắc thái.
+
+Phê duyệt Hàng loạt & Lên lịch Một chạm
+
+Cho phép chọn nhanh nhiều bài đăng đã đạt yêu cầu và phê duyệt tất cả để đẩy vào hàng đợi lên lịch chỉ với một nút bấm.
+
+Luồng Duyệt bài cho Đội nhóm (Team Approval Workflow)
+
+Phân quyền người viết, người duyệt (ví dụ: nhà sáng lập duyệt cuối cùng), với cơ chế góp ý trực tiếp trên bản nháp, tránh việc dùng Google Docs bên ngoài.
+
+Tùy chỉnh Độ dài & Mức Độ Chi tiết Linh hoạt
+
+Một thanh trượt cho phép điều chỉnh ngay lập tức mức độ chuyên sâu và độ dài của bài viết mà không cần viết lại prompt.
+
+Lịch sử Chỉnh sửa & Khôi phục Phiên bản
+
+Theo dõi mọi thay đổi và cho phép khôi phục về bất kỳ phiên bản nháp nào trước đó một cách dễ dàng.
+
+5. Lên lịch & Phân phối Thông minh (Smart Scheduling & Distribution)
+Đẩy bài Trực tiếp qua API Kênh Mạng xã hội
+
+Kết nối và xuất bản nội dung trực tiếp lên LinkedIn, X, Facebook, Reddit, TikTok mà không cần rời khỏi nền tảng.
+
+Công cụ Lên lịch Kéo-thả Trực quan
+
+Giao diện lịch hàng tháng/tuần cho phép kéo-thả để xếp lịch đăng bài, thay đổi thứ tự và chỉnh sửa thời gian cực kỳ linh hoạt.
+
+Đề xuất Khung giờ Vàng bằng AI
+
+Tự động phân tích lịch sử tương tác của khán giả để đề xuất thời điểm đăng bài tối ưu nhất cho từng kênh.
+
+Tự động Điều chỉnh Múi giờ (Time Zone Sync)
+
+Đồng bộ và tự động chuyển đổi lịch đăng bài về đúng múi giờ địa phương của đối tượng mục tiêu toàn cầu.
+
+Lên lịch Định kỳ cho Nội dung Mãi xanh (Evergreen Recycling)
+
+Thiết lập kho nội dung "thường xanh" để hệ thống tự động tái đăng theo chu kỳ thông minh, tránh trùng lặp và gây nhàm chán.
+
+Hàng đợi Phân phối Thông minh (Smart Content Queue)
+
+Hệ thống tự động sắp xếp và cân bằng các bài đăng theo chủ đề (giá trị, bán hàng, chuyên môn) trong hàng đợi để duy trì một profile hài hòa.
+
+6. An toàn & Chống Shadowban (Anti-Shadowban & Algorithmic Safety)
+Điều phối Thời gian Động học (Randomized Delays)
+
+Tự động chèn các khoảng trễ ngẫu nhiên (5-25 phút) giữa các bài đăng để mô phỏng thao tác hoàn toàn của con người, tránh bị flag là bot.
+
+Xoay vòng & Biến tấu Hashtag Tự động
+
+AI tự động tạo và xoay vòng các bộ hashtag khác nhau cho cùng một chủ đề để không bao giờ bị lặp lại một cách máy móc.
+
+Công cụ Ngôn ngữ Mã hóa (Algospeak Engine)
+
+Tự động thay thế các từ ngữ có khả năng khiến thuật toán giảm tầm với (ví dụ: "mua ngay", "link dưới comment") bằng các cách diễn đạt an toàn hơn.
+
+Máy quét & Cảnh báo Nguy cơ Shadowban
+
+Phân tích lịch sử tài khoản và hành vi đăng bài hiện tại để đưa ra cảnh báo sớm về nguy cơ bị hạn chế tương tác.
+
+Chế độ Bắt chước Tốc độ Gõ của Con người
+
+Khi sử dụng chức năng tự động đăng, hệ thống mô phỏng tốc độ thao tác và các khoảng nghỉ tự nhiên như một người thật đang gõ và chỉnh sửa.
+
+7. Giám sát & Phân tích Hiệu suất (Analytics & Performance Tracking)
+Bảng Điều khiển Tổng quan Đa kênh (Unified Analytics Dashboard)
+
+Hiển thị toàn bộ chỉ số quan trọng (tương tác, tiếp cận, click) từ tất cả các kênh mạng xã hội trên một màn hình duy nhất.
+
+Phân tích Tương quan Nội dung (Content Attribution Analytics)
+
+Máy học phân tích để chỉ ra chính xác đặc điểm nào của nội dung (giọng điệu, độ dài, chủ đề, loại hình ảnh) đang thực sự thúc đẩy chuyển đổi và tương tác.
+
+Báo cáo Tự động & Định kỳ
+
+Thiết lập báo cáo hàng tuần/tháng tự động gửi qua email, tập trung vào các chỉ số cốt lõi và đề xuất hành động cụ thể.
+
+Theo dõi Hành trình Khách hàng (UTM Watermarking)
+
+Tự động gắn tham số UTM vào mọi liên kết để theo dõi chính xác lượng truy cập và chuyển đổi về website sản phẩm.
+
+Phân tích Tình cảm & Cảm xúc Khán giả (Sentiment Analysis)
+
+Quét các bình luận và phản hồi để báo cáo về sắc thái cảm xúc của cộng đồng đối với thương hiệu.
+
+8. Nghiên cứu & Phân tích Cạnh tranh (Competitive Intelligence)
+Trình Theo dõi Đối thủ Tự động (Competitor Watcher)
+
+Nhập profile đối thủ, hệ thống tự động theo dõi và báo cáo mọi bài đăng, chiến dịch và thay đổi chiến lược nội dung của họ.
+
+AI Phát hiện Khoảng trống Nội dung (Competitor Gap Analyzer)
+
+Phân tích đối thủ để tìm ra những chủ đề "đất vàng" họ đang làm tốt và nhận nhiều tương tác mà thương hiệu của bạn đang bỏ sót.
+
+Phân tích Sự hiện diện trên AI Search (LLM Visibility Score)
+
+Theo dõi mức độ thường xuyên thương hiệu của bạn được các mô hình AI tìm kiếm như ChatGPT, Perplexity nhắc đến, và so sánh với đối thủ.
+
+Đo lường Tỷ trọng Tiếng nói (Share of Voice)
+
+Tự động tính toán và báo cáo tỷ lệ thảo luận về thương hiệu của bạn so với tổng thảo luận của cả ngành và đối thủ cạnh tranh chính.
+
+Cảnh báo Chiến dịch "Nóng" của Đối thủ
+
+Gửi thông báo tức thời khi một bài đăng của đối thủ bất ngờ vượt ngưỡng tương tác cao, kèm phân tích nhanh về nguyên nhân.
+
+9. Cộng tác & Quản lý Nhóm (Team Collaboration)
+Lịch Nội dung Dùng chung & Phân công
+
+Lịch trực quan cho cả nhóm, nơi có thể phân công nhiệm vụ sản xuất nội dung, đặt deadline và theo dõi tiến độ.
+
+Quản lý Phân quyền Nâng cao (Advanced RBAC)
+
+Cho phép phân quyền chi tiết đến từng tính năng và kênh phân phối cho các thành viên trong nhóm.
+
+Thư viện Tài sản Kỹ thuật số Tập trung (Shared Asset Library)
+
+Kho lưu trữ chung cho logo, font chữ, hình ảnh thương hiệu và video để đảm bảo mọi thành viên dùng đúng chuẩn.
+
+Hệ thống Ghi chú & Góp ý Trực tuyến
+
+Cho phép gắn ghi chú, tag đồng nghiệp và thảo luận ngay trên bản nháp hoặc lịch đăng bài để phản hồi theo ngữ cảnh.
+
+10. Tích hợp & Khả năng Mở rộng (Integrations & Platform Extensibility)
+API Công khai & Webhook Mở
+
+Cung cấp API cho phép doanh nghiệp tự xây dựng các kết nối tùy chỉnh để đọc dữ liệu và kích hoạt quy trình xuất bản nội dung từ hệ thống của họ.
+
+Kết nối với Hệ thống CMS (Webflow, WordPress, Ghost)
+
+Cho phép đẩy trực tiếp một bài blog dài do AI viết lên website mà không cần sao chép thủ công.
+
+Tích hợp Nền tảng Thiết kế (Canva, Figma)
+
+Đồng bộ hóa để lấy trực tiếp các mẫu thiết kế từ Canva/Figma vào thư viện tài sản của nền tảng.
+
+Hệ thống Plugin Trình duyệt (Chrome Extension)
+
+Một tiện ích cho phép "bắt" ngay một bài báo hay thread trên X đang đọc dở và ném vào Brand Vault để làm nguyên liệu.
+
+Kết nối Nền tảng Cộng đồng (Slack, Discord, Circle)
+
+Tự động đẩy các bài đăng quan trọng lên kênh Slack/Discord của cộng đồng và cho phép phê duyệt nội dung ngay từ Slack.
+
+11. Bảo mật & Quản trị Rủi ro (Security & Risk Mitigation)
+Phương thức Dự phòng khi API thay đổi (Fallback Mode)
+
+Khi X/LinkedIn thay đổi chính sách và khóa API, nền tảng lập tức xuất bài đăng sang khay nhớ tạm với định dạng hoàn hảo và hướng dẫn người dùng đăng thủ công.
+
+Mã hóa và Cách ly Dữ liệu Khách hàng
+
+Mọi dữ liệu trong Brand Vault được mã hóa AES-256 và cách ly ở cấp độ tenant để đảm bảo không bị rò rỉ sang các mô hình AI công cộng.
+
+Cảnh báo Hành vi Bất thường của Tài khoản
+
+Hệ thống tự phát hiện nỗ lực đăng nhập đáng ngờ và gửi xác thực đa yếu tố (MFA) để bảo vệ tài khoản người dùng.
+
+Cơ chế Chống Sụp đổ Mô hình (Model Collapse Prevention)
+
+Buộc AI ưu tiên dữ liệu gốc do con người viết và từ chối tự huấn luyện lên các nội dung do AI tạo ra trước đó để ngăn sự thoái hóa giọng điệu.
+
+12. Tính năng AI Tiên tiến & Đột phá (Futuristic / Crazy AI Features)
+Bản sao Kỹ thuật số của Nhà sáng lập (Founder’s Digital Twin)
+
+AI tạo ra một agent có khả năng trả lời bình luận trên mạng xã hội một cách tự động với đúng giọng điệu, kiến thức chuyên môn và sự hài hước của chính nhà sáng lập.
+
+Chế độ "Ma" (Ghost Mode) cho Sáng tạo Gốc
+
+Người dùng gạch đầu dòng các ý tưởng rời rạc, AI "nhập vai" thành chính họ để viết thành một bài blog sâu sắc, đọc như thể người dùng đã bỏ ra 5 tiếng.
+
+AI Dự báo Lan truyền (Virality Prediction & Simulation)
+
+Trước khi đăng, AI mô phỏng mức độ viral tiềm năng của bài viết dựa trên các mô hình ngôn ngữ lớn được huấn luyện từ hàng triệu bài đăng xu hướng.
+
+Phòng Chiến tranh Nội dung (Content War Room)
+
+Khi phát hiện một chủ đề đang bùng nổ trong ngách, tự động triệu tập một "phòng chiến tranh" ảo, tạo ra một loạt 10-15 nội dung phản ứng nhanh trên mọi kênh trong vài phút.
+
+Tự động Tối ưu Landing Page từ Nội dung Mạng xã hội
+
+Khi một bài post trên mạng xã hội đạt viral, AI tự động tạo ra một landing page phù hợp trên website của bạn để thu hút và chuyển đổi lượng traffic khổng lồ đó.
+
+AI Huấn luyện viên Giao tiếp Toàn diện (Executive Comms Coach)
+
+Quay video bạn đang thuyết trình hoặc nói chuyện, AI sẽ phân tích và đưa ra phản hồi về nhịp điệu, ngữ điệu và cách kể chuyện để bạn cải thiện kỹ năng giao tiếp.
+
+Tự động hóa Tiếp cận & Bán hàng (Autonomous Outreach Agent)
+
+AI tự động tìm kiếm các bình luận tiềm năng trên mạng xã hội, soạn tin nhắn riêng (DM) theo giọng điệu cá nhân để bắt đầu cuộc trò chuyện bán hàng một cách tự nhiên.
+
+Phòng Thu Vũ trụ AI (AI Content Universe Sandbox)
+
+Không chỉ tái chế 1 bài, mà từ 1 ý tưởng, AI xây dựng toàn bộ "vũ trụ nội dung": 1 ebook, 1 khóa học email, 3 webinar scripts, 50 tweets, 10 LinkedIn posts, và 2 podcast scripts.
+
+13. Trải nghiệm Người dùng & Cá nhân hóa (UX & Personalization)
+Chế độ Tối Giản "Không Gây Xao nhãng" (Zen Mode)
+
+Giao diện toàn màn hình ẩn mọi menu, chỉ hiển thị khung soạn thảo và các gợi ý AI, dành cho các phiên sáng tạo sâu.
+
+Luồng Công việc Thích ứng (Adaptive Workflows)
+
+Hệ thống học cách bạn làm việc và tự động sắp xếp lại giao diện (dashboard) để ưu tiên những công cụ bạn dùng nhiều nhất.
+
+Hướng dẫn và Trợ giúp Nhạy ngữ cảnh (Contextual Help & Tooltips)
+
+Các popup giải thích ngắn gọn và hướng dẫn bằng video xuất hiện đúng lúc khi người dùng tương tác với một tính năng mới.
+
+Phím tắt và Lệnh Bàn phím (Command Palette)
+
+Cho phép thực hiện mọi thao tác từ tạo nội dung mới, chuyển kênh đến phê duyệt bài chỉ thông qua bàn phím, tăng tốc độ làm việc cho người dùng thành thạo.
+
+Cá nhân hóa Bảng Điều khiển (Customizable Dashboards)
+
+Người dùng có thể tự do kéo-thả, thêm/bớt widget hiển thị lịch, KPI, nhiệm vụ và trạng thái phê duyệt theo nhu cầu quản lý của riêng mình.

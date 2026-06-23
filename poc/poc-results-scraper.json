@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-05-16T17:47:13.122Z",
+  "passCount": 3,
+  "totalCount": 5,
+  "decision": "KEEP_URL_FEATURE",
+  "results": [
+    {
+      "name": "Viblo (tech blog VN)",
+      "url": "https://viblo.asia/p/tong-hop-kien-thuc-javascript-can-biet-truoc-khi-hoc-reactjs-DZrGNNDdGVB",
+      "success": true,
+      "title": "Tìm Hiểu Về Lệnh GREP Trong Linux - Viblo",
+      "wordCount": 1052,
+      "excerpt": "Trong bài trước tôi đã giới thiệu về lệnh find trong linux, nó rất hữu ích trong việc tìm kiếm file. Tiếp tục tìm hiểu về Linux, tôi sẽ trình bày về lệnh grep - nó gíup bạn tìm chuỗi trong file chỉ đị...",
+      "fullTextLength": 4803,
+      "elapsed": 875
+    },
+    {
+      "name": "toidicodedao (blog VN)",
+      "url": "https://toidicodedao.com/2023/07/18/su-that-ve-ai/",
+      "success": false,
+      "error": "HTTP 404 Not Found",
+      "wordCount": 0,
+      "title": null,
+      "elapsed": 633
+    },
+    {
+      "name": "Substack",
+      "url": "https://newsletter.pragmaticengineer.com/p/what-is-old-is-new-again",
+      "success": true,
+      "title": "What is Old is New Again",
+      "wordCount": 3422,
+      "excerpt": "👋 Hi, this is Gergely. I give one conference talk per year: this was the one for 2024. It’s my best attempt to summarize the sudden changes across the tech industry and what they will mean for the ne...",
+      "fullTextLength": 21251,
+      "elapsed": 506
+    },
+    {
+      "name": "Dev.to",
+      "url": "https://dev.to/t/javascript",
+      "success": false,
+      "title": "JavaScript",
+      "wordCount": 60,
+      "excerpt": "Once relegated to the browser as one of the 3 core technologies of the web, JavaScript can now be found almost anywhere you find code. JavaScript developers move fast and push software development for...",
+      "fullTextLength": 334,
+      "elapsed": 1008
+    },
+    {
+      "name": "Blog cá nhân (Overreacted - Dan Abramov)",
+      "url": "https://overreacted.io/a-complete-guide-to-useeffect/",
+      "success": true,
+      "title": "A Complete Guide to useEffect — overreacted",
+      "wordCount": 10198,
+      "excerpt": "You wrote a few components with Hooks. Maybe even a small app. You’re mostly satisfied. You’re comfortable with the API and picked up a few tricks along the way. You even made some custom Hooks to ext...",
+      "fullTextLength": 60771,
+      "elapsed": 1190
+    }
+  ]
+}

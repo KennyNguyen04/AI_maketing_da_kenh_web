@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-midnight-ink: #080331;
+  --color-regal-violet: #1b1463;
+  --color-forest-fern: #328a3b;
+  --color-sky-blue: #4865ff;
+  --color-deep-moss: #0d5238;
+  --color-sunset-orange: #ff6d39;
+  --color-blush-pink: #f098d7;
+  --color-vivid-green: #114e0b;
+  --color-lavender-bloom: #ffaefe;
+  --color-outline-blue: #a2baff;
+  --color-hint-of-blue: #dce4fb;
+  --color-vibrant-orange: #f65300;
+  --color-pitch-black: #000000;
+  --color-pure-canvas: #ffffff;
+  --color-light-gray: #cccccc;
+  --color-warm-sand: #f8f3eb;
+  --color-dark-charcoal: #333333;
+  --color-muted-stone: #eae4d9;
+  --color-app-bg: #f7f8fb;
+  --color-app-line: #e5e7eb;
+  --color-app-muted: #6b7280;
+  --color-gradient-aura-start: #cc7ab5;
+  --font-heading: var(--font-lora), Georgia, serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 8px;
+  --radius-badge: 999px;
+  --radius-button: 8px;
+  --radius-nav: 8px;
+  --shadow-sm: rgba(15, 23, 42, 0.04) 0px 1px 2px 0px;
+  --shadow-md: rgba(15, 23, 42, 0.08) 0px 8px 20px -16px;
+  --shadow-lg: rgba(15, 23, 42, 0.14) 0px 18px 40px -24px;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+    background-color: var(--color-app-bg);
+    color: var(--color-midnight-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-body);
+    font-weight: 650;
+    letter-spacing: 0;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

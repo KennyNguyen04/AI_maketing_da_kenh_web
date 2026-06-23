@@ -1,0 +1,16 @@
+import { SocialAccountsSettings } from '@/features/social/components/SocialAccountsSettings'
+
+export default function SettingsPage() {
+  return (
+    <div className="space-y-6">
+      <header>
+        <p className="text-sm font-medium text-app-muted">Cài đặt</p>
+        <h1 className="mt-1 text-2xl text-midnight-ink md:text-3xl">Phân phối mạng xã hội</h1>
+        <p className="mt-2 max-w-[760px] text-sm leading-6 text-dark-charcoal">
+          Kết nối tài khoản để đăng sau khi đã duyệt bản nháp. Amplify luôn yêu cầu bạn xác nhận trước khi đăng.
+        </p>
+      </header>
+      <SocialAccountsSettings />
+    </div>
+  )
+}

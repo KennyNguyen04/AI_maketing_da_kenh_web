@@ -1,0 +1,324 @@
+# Kế hoạch Triển khai — Nền tảng AI Marketing Đa kênh
+
+## Quyết định đã Chốt
+
+| Hạng mục | Quyết định |
+|----------|-----------|
+| Scope | Theo đúng masterplan v2 — không API publishing |
+| AI chính | **Gemini 2.5 Flash** (Google AI Studio API) — đổi từ Flash-Lite do quota |
+| AI fallback | **DeepSeek v3** (DeepSeek API — cực rẻ) |
+| Ngôn ngữ UI | Tiếng Việt (chính) + Tiếng Anh |
+| Design | Light mode, Glassmorphism / Futuristic |
+| Hosting | GitHub Education Pack (Azure credits / Vercel free) |
+| Dữ liệu ban đầu | Mock/fake data, mở rộng sau |
+| Mục tiêu | Dự án thật — chuyên đề tốt nghiệp |
+
+---
+
+## Tech Stack Đề xuất
+
+> [!IMPORTANT]
+> Đã điều chỉnh từ masterplan để phù hợp với context của bạn (GitHub Education, Gemini/DeepSeek, chi phí thấp).
+
+### So sánh: Masterplan gốc vs Đề xuất mới
+
+| Thành phần | Masterplan gốc | **Đề xuất mới** | Lý do thay đổi |
+|-----------|---------------|-----------------|-----------------|
+| Frontend | Next.js 14 + TypeScript + Tailwind | **Next.js 15 + TypeScript + Tailwind v4** | Phiên bản mới nhất (05/2026), App Router ổn định hơn |
+| Backend | Next.js API Routes | **Next.js Route Handlers** (giữ nguyên) | Không cần tách backend riêng |
+| Database | Supabase (PostgreSQL) | **Supabase** (giữ nguyên) | Free tier 500MB đủ dùng, Auth + RLS có sẵn |
+| Auth | Supabase Auth | **Supabase Auth** (giữ nguyên) | Email/Password, OAuth Google — miễn phí |
+| AI Primary | Claude Sonnet | **Gemini 2.0 Flash-Lite** | Miễn phí qua Google AI Studio (1,500 RPD free) |
+| AI Fallback | OpenAI GPT-4o | **DeepSeek v3** | Cực rẻ (~$0.07/M input tokens) |
+| Job Queue | Inngest | **Inngest** (giữ nguyên) | Free tier đủ, giải quyết Vercel 10s timeout |
+| Deploy | Vercel | **Vercel** (giữ nguyên) | Zero config, free tier cho hobby project |
+| Monitoring | Sentry | **Sentry** (giữ nguyên) | Free tier, bắt exceptions từ cả FE + API |
+| AI SDK | Anthropic SDK | **Google AI SDK (`@google/genai`) + OpenAI SDK** (DeepSeek compatible) | Phù hợp với model đã chọn |
+
+### Chi phí ước tính hàng tháng
+
+| Dịch vụ | Chi phí |
+|---------|--------|
+| Supabase Free Tier | $0 |
+| Vercel Hobby | $0 |
+| Gemini Flash-Lite (1,500 req/day free) | $0 |
+| DeepSeek v3 fallback (~100K tokens/tháng) | ~$0.01 |
+| Inngest Free Tier | $0 |
+| Sentry Free Tier | $0 |
+| **Tổng** | **~$0/tháng** (gần như miễn phí) |
+
+---
+
+## Kiến trúc Hệ thống (Điều chỉnh)
+
+```
+[Browser — User]
+    │
+    │ HTTPS
+    ▼
+[Next.js 15 — App Router]
+    ├── /app (React Server Components + Client Components)
+    ├── /app/api/* (Route Handlers — REST API)
+    │
+    ├──────────────────┬──────────────────────┐
+    │                  │                      │
+    ▼                  ▼                      ▼
+[Supabase]        [Inngest Cloud]       [AI Service Layer]
+├── PostgreSQL    ├── Brand Vault        ├── Gemini Flash-Lite
+├── Auth          │   Analysis Worker    │   (Primary)
+├── RLS           ├── Repurpose          ├── DeepSeek v3
+├── Storage       │   Content Worker     │   (Fallback)
+└── Realtime*     └── Retry + Error      └── Unified Interface
+                      Handling
+```
+
+---
+
+## Checklist Triển khai (Theo Masterplan)
+
+### 🔬 Phase POC — Proof of Concept ✅ HOÀN THÀNH
+
+> [!NOTE]
+> Làm TRƯỚC khi bắt đầu bất kỳ module nào. Mục đích: phát hiện sớm vấn đề kỹ thuật.
+
+#### Task 1 — Test URL Scraper ✅
+- [x] Viết script Node.js thử cào 5 URL blog (blog cá nhân, Medium, Substack, Viblo, blog kỹ thuật VN)
+- [x] Dùng `@mozilla/readability` + `jsdom` để trích xuất main content
+- [x] Ghi lại kết quả: **3/5 URL pass** → giữ tính năng URL
+- [x] **Không dùng** linkedin.com/pulse (yêu cầu đăng nhập)
+
+#### Task 2 — Test Prompt phân tích giọng văn ✅
+- [x] Đăng ký **Google AI Studio** → lấy API key cho Gemini ~~Flash-Lite~~ → **đổi sang 2.5 Flash** (quota)
+- [x] Viết script gọi Gemini API với prompt phân tích giọng văn (schema JSON từ masterplan)
+- [x] Test với ít nhất 3 bài viết có phong cách khác nhau → **3/3 stable**
+- [x] Kiểm tra JSON output: hợp lệ? parse được? tone có đúng? → **Tất cả pass**
+- [x] Test tương tự với **DeepSeek v3** API → **Lỗi 402 Insufficient Balance** (chưa nạp tiền)
+- [x] Ghi lại quyết định:
+
+| Quyết định | Kết quả POC | Hành động |
+|------------|-------------|-----------|
+| URL Scraping | **Pass (3/5)** | ✅ Build — đã tích hợp |
+| Gemini Prompt JSON | **Stable (3/3)** | ✅ Dùng ngay, không cần retry |
+| DeepSeek Prompt JSON | **Chưa test** (402) | ⏳ Chờ nạp tiền |
+
+---
+
+### 🏗️ Module 0 — Project Setup ✅ HOÀN THÀNH
+
+- [x] Khởi tạo Next.js 15 project: `npx -y create-next-app@latest ./`
+  - TypeScript: Yes
+  - Tailwind CSS: Yes (v4)
+  - App Router: Yes
+  - ESLint: Yes
+- [x] Setup Supabase project (supabase.com → New Project)
+- [x] Tạo file `.env.local` với tất cả biến môi trường (đã điền đầy đủ keys thật)
+- [x] Tạo schema database trên Supabase SQL Editor:
+  - [x] Bảng `profiles` (id, email, user_plan, created_at)
+  - [x] Bảng `brand_vaults` (id, user_id, name, voice_profile, system_prompt, source_type, raw_input, is_active, created_at, updated_at)
+  - [x] Bảng `repurpose_jobs` (id, user_id, brand_vault_id, title, source_type, source_content, channels, status, error_message, created_at)
+  - [x] Bảng `drafts` (id, job_id, user_id, channel, content, is_edited, is_done, is_current, version, created_at, updated_at)
+- [x] Tạo trigger `handle_new_user()` tự động tạo profile khi đăng ký
+- [x] **Bật RLS** cho tất cả 4 bảng + thêm policy `user_id = auth.uid()`
+- [x] Setup Inngest: `npm install inngest@3` + tạo `/api/inngest` route
+- [ ] Cài Sentry: `npx @sentry/wizard@latest -i nextjs` *(chưa làm — chuyển sang Module 5)*
+- [ ] Deploy lần đầu lên Vercel *(chưa làm — chờ Module 3)*
+- [x] ✅ **Kiểm tra**: Schema đúng trên Supabase Dashboard, build pass
+
+---
+
+### 🔐 Module 1 — Authentication & User Management ✅ HOÀN THÀNH
+
+- [x] Cài Supabase client: `npm install @supabase/supabase-js @supabase/ssr`
+- [x] Tạo helpers: `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/middleware.ts`
+- [x] Tạo trang `/login` — form email + password → `supabase.auth.signInWithPassword`
+- [x] Tạo trang `/register` — form đăng ký → `supabase.auth.signUp` → redirect `/onboarding`
+- [x] Tạo Next.js `middleware.ts` (root) bảo vệ routes + refresh session
+- [x] Tạo `app/auth/callback/route.ts` cho email confirmation
+- [x] Tạo server action `signOut()` + nút Đăng xuất trên Sidebar
+- [x] `AppLayout` fetch user thật từ Supabase → truyền vào Sidebar
+- [x] Tắt email confirmation trên Supabase (cho dev)
+- [ ] Tạo user admin đầu tiên thủ công trên Supabase: `user_plan = 'admin'` *(chưa làm)*
+- [x] ✅ **Kiểm tra**: Build pass, auth flow code complete
+
+---
+
+### 🧠 Module 2 — Brand Vault ✅ CODE HOÀN THÀNH (chờ test end-to-end)
+
+#### Backend ✅
+- [x] Bảng `brand_vaults` đã có trên Supabase + RLS policy
+- [x] Build API `POST /api/brand-vault/analyze-text`
+  - Nhận raw text → tạo record `brand_vaults` (is_active=false) → trigger Inngest event
+- [x] Tích hợp **Gemini 2.5 Flash** API vào Inngest worker (`lib/ai/gemini.ts`)
+  - Gọi Gemini với prompt phân tích giọng văn
+  - Parse JSON response (hỗ trợ cả markdown-wrapped JSON)
+  - Lưu `voice_profile` + `system_prompt` → set `is_active = true` trong DB
+  - *Chưa implement* fallback DeepSeek (chờ nạp tiền)
+- [x] Build API `POST /api/brand-vault/analyze-url`
+  - Dùng `jsdom` + `@mozilla/readability` extract text từ URL
+  - Giới hạn 5000 từ đầu tiên
+  - Pipeline xử lý giống analyze-text
+- [ ] Build API `POST /api/brand-vault/from-form` — Cold Start *(chưa làm — ưu tiên thấp)*
+- [x] Build API `POST /api/brand-vault/save` — Lưu voice_profile đã xác nhận (rebuild system_prompt)
+
+#### Frontend ✅
+- [x] Trang `/onboarding` — Gọi API + polling DB mỗi 2s chờ `is_active = true`
+- [x] Component `BrandVaultSetupText` — input URL/text, nút submit, disable khi chưa đủ dữ liệu
+- [x] Component `BrandVaultSetupForm` — form 5 câu hỏi *(UI có sẵn, chưa gắn API)*
+- [x] Component `VoiceProfilePreview` — hiển thị tags/chips, cho phép edit + xoá, onChange propagate
+- [x] Màn hình loading (`AnalyzingLoader`) hiển thị khi AI đang phân tích
+- [x] Màn hình xác nhận (`/onboarding/confirm?vaultId=xxx`) — fetch DB thật, nút Lưu gọi API
+
+#### Integration Test
+- [x] Build pass (0 errors, 0 warnings)
+- [ ] Test end-to-end với Inngest Dev Server *(cần chạy `npx inngest-cli@latest dev`)*
+- [ ] ✅ **Kiểm tra**: Nạp URL/text → voice profile xuất hiện → chỉnh sửa → lưu thành công
+
+---
+
+### ⚙️ Module 3 — Repurposing Engine ✅ CODE HOÀN THÀNH (chờ test)
+
+#### Backend ✅
+- [x] Build API `POST /api/jobs`
+  - Nhận source_content, channels[], brand_vault_id
+  - Tạo record `repurpose_jobs` status='pending'
+  - Push Inngest event → trả về job_id
+- [x] Tích hợp Gemini vào worker (`repurposeContent`)
+  - Load Brand Vault → lấy system_prompt → gọi Gemini
+- [x] Mở rộng worker xử lý **4 kênh song song** (`Promise.all()`)
+  - Lưu draft vào bảng `drafts` (is_current=true)
+  - Handle lỗi → update status='failed'
+- [x] Build polling endpoint `GET /api/jobs/:id`
+  - Trả về status + drafts khi done
+
+#### Prompt Templates ✅
+- [x] LinkedIn Post: 150-300 từ, hook mạnh, 1-2 insight, câu hỏi cuối, ≤3 hashtag
+- [x] LinkedIn Thread: 5-7 posts ngắn, phân cách bằng "---"
+- [x] Facebook: 200-400 từ, casual, kể chuyện
+- [x] X/Twitter: <280 ký tự, hook mạnh, 1 insight, không hashtag
+
+#### Frontend ✅
+- [x] Component `NewJobForm` — fetch Brand Vault, chọn kênh, gọi `POST /api/jobs`
+- [x] Component `JobStatusPoller` — polling API mỗi 2 giây, xử lý UI state pending/done/failed
+- [x] Auto-redirect → `/review/:jobId` khi job done
+
+#### Testing
+- [x] Build pass (0 errors)
+- [ ] Test end-to-end với dữ liệu thật
+- [ ] Verify 4 drafts đúng format trong DB
+- [ ] Edge cases — AI error → job failed + error_message
+
+---
+
+### 📋 Module 4 — Review Dashboard (Ngày 23–29)
+
+#### Backend (Ngày 23–24)
+- [ ] API `GET /api/jobs/:id/drafts` — chỉ trả `is_current = true`
+- [ ] API `PATCH /api/drafts/:id` — autosave content, update is_edited
+- [ ] API `POST /api/drafts/:id/regenerate` — set cũ is_current=false, tạo mới version+1
+- [ ] API `GET /api/jobs` — danh sách jobs của user (cho Dashboard chính)
+
+#### Frontend (Ngày 25–27)
+- [ ] **Ngày 25**: Trang `/dashboard`
+  - Nút "Tạo nội dung mới" nổi bật
+  - Status Brand Vault (đã setup / chưa)
+  - Bảng danh sách jobs: title, ngày, status, link vào review
+- [ ] **Ngày 26–27**: Trang `/review/:jobId`
+  - Layout 2 cột: trái (source) / phải (drafts)
+  - Tabs theo kênh (LinkedIn, Facebook, X...)
+  - Textarea editor + character count
+  - Nút Copy → clipboard + icon checkmark 2s
+  - Nút Regenerate → confirm → loading → content mới
+  - Autosave: debounce 1s sau khi ngừng gõ → PATCH
+  - Nút "Đánh dấu Hoàn thành" → update is_done cho tất cả drafts
+
+#### Testing (Ngày 28–29)
+- [ ] **Ngày 28**: Fix bug, test autosave, copy, regenerate, mark done
+- [ ] **Ngày 29**: **Integration test end-to-end hoàn chỉnh**
+  - Đăng ký mới → Brand Vault → Submit bài → Xem 4 drafts → Chỉnh sửa → Copy
+  - Mục tiêu: hoàn thành toàn bộ trong <10 phút
+- [ ] ✅ **Kiểm tra**: Chỉnh sửa autosave, Copy clipboard, Regenerate, Mark done — tất cả hoạt động
+
+---
+
+### ✨ Module 5 — Polish & Error Handling (Ngày 30–33)
+
+#### Ngày 30 — Error States & UX
+- [ ] Error messages thân thiện (không crash)
+- [ ] Loading skeletons cho components chờ data
+- [ ] Empty states: chưa có Brand Vault, chưa có jobs
+- [ ] Toast notifications: save, copy, error, job failed
+
+#### Ngày 31 — AI Resilience
+- [ ] Implement fallback chain: Gemini → retry 1 lần → DeepSeek v3 → fail → error message
+- [ ] Test fallback: dùng API key sai của Gemini → trigger DeepSeek
+- [ ] Đảm bảo job không bao giờ stuck ở 'processing'
+
+#### Ngày 32 — Responsive & Stability
+- [ ] Check responsive: 1280px và 1440px (không cần mobile)
+- [ ] Test nhiều loại input: bài ngắn <200 từ, bài dài >3000 từ, tiếng Anh, hỗn hợp Anh-Việt
+
+#### Ngày 33 — Final Check
+- [ ] Chạy toàn bộ luồng end-to-end trên Vercel
+- [ ] Kiểm tra Sentry dashboard: không có unhandled exceptions
+- [ ] Kiểm tra Inngest dashboard: không có failed jobs
+- [ ] ✅ **MVP HOÀN THÀNH**
+
+---
+
+### 🧪 Phase 3 — Testing & Ra mắt (Tuần 7–8)
+
+#### Checklist trước khi mời người test
+- [ ] Đăng ký/login hoạt động ổn định
+- [ ] Brand Vault: cả 2 luồng không crash
+- [ ] Repurposing: job không stuck pending
+- [ ] Review Dashboard: autosave + copy hoạt động
+- [ ] Không có lỗi console trên Chrome
+- [ ] Test với 2-3 loại bài viết khác nhau
+
+#### Nội dung chuẩn bị
+- [ ] Viết hướng dẫn sử dụng ngắn (5 bước, screenshot)
+- [ ] Chuẩn bị FAQ: "AI có lưu nội dung không?", "Có giới hạn không?"
+- [ ] Chuẩn bị Google Form thu thập feedback
+
+#### Thu thập Feedback (5-10 người)
+- [ ] Mời 5-10 người test đầu tiên
+- [ ] Thu thập feedback qua form:
+  1. Hoàn thành đăng ký → bản nháp đầu tiên trong 5 phút?
+  2. Bản nháp nghe giống giọng bạn? (1-5)
+  3. Điểm nào khó chịu?
+  4. Có dùng lại tuần sau?
+
+#### Tiêu chí thành công Phase 3
+- [ ] ≥4/5 người hoàn thành flow trong 5 phút
+- [ ] ≥3/5 cho điểm giống giọng ≥3/5
+- [ ] Không có lỗi nghiêm trọng (crash, stuck, mất data)
+
+---
+
+## Thứ tự Ưu tiên Bắt đầu
+
+```
+Bước 1 → Đăng ký Google AI Studio + DeepSeek API → lấy API keys
+Bước 2 → Chạy POC (nửa ngày)
+Bước 3 → Ghi lại quyết định POC
+Bước 4 → Bắt đầu Module 0 (Project Setup)
+```
+
+> [!TIP]
+> **Bắt đầu ngay từ Bước 1**: Đăng ký API keys trước, vì cần chúng cho POC.
+> - Google AI Studio: [aistudio.google.com](https://aistudio.google.com) → Get API Key
+> - DeepSeek: [platform.deepseek.com](https://platform.deepseek.com) → API Keys
+
+---
+
+## Phụ lục: Quyết định còn treo (từ Masterplan)
+
+Những câu hỏi này cần trả lời trước khi build module liên quan:
+
+| # | Quyết định | Đề xuất | Trả lời trước Module |
+|---|-----------|---------|---------------------|
+| 1 | Giới hạn độ dài bài đầu vào? | Tối đa 5000 từ, truncate + thông báo | Module 3 |
+| 2 | Rate limit per user? | 20 jobs/ngày cho free | Module 3 |
+| 3 | Xác minh email sau đăng ký? | Có (Supabase hỗ trợ sẵn) | Module 1 |
+| 4 | URL crawling xử lý paywall? | Không — chỉ public URL | Module 2 |
+| 5 | Polling hay Realtime cho job status? | Polling 2s (đơn giản) | Module 3 |

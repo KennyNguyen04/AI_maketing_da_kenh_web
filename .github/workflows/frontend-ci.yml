@@ -1,0 +1,51 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+      GOOGLE_AI_API_KEY: ci-google-key
+      INNGEST_EVENT_KEY: ci-inngest-event-key
+      INNGEST_SIGNING_KEY: ci-inngest-signing-key
+      TOKEN_ENCRYPTION_KEY: ci-token-encryption-key
+      X_CLIENT_ID: ci-x-client-id
+      X_CLIENT_SECRET: ci-x-client-secret
+      X_REDIRECT_URI: http://localhost:3000/api/social/x/callback
+      FACEBOOK_APP_ID: ci-facebook-app-id
+      FACEBOOK_APP_SECRET: ci-facebook-app-secret
+      FACEBOOK_REDIRECT_URI: http://localhost:3000/api/social/facebook/callback
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

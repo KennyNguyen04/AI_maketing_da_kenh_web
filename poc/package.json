@@ -1,0 +1,16 @@
+{
+  "name": "amplify-poc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:scraper": "node test-url-scraper.mjs",
+    "test:ai": "node test-ai-prompt.mjs"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "jsdom": "^25.0.0",
+    "@google/genai": "^1.0.0",
+    "openai": "^4.0.0"
+  }
+}

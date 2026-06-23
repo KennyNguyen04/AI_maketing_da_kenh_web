@@ -1,0 +1,35 @@
+﻿"Test Case ID","Module","Tên Kịch Bản","Các Bước Thực Hiện","Kết Quả Mong Đợi","Trạng Thế/Kết Quả","Ghi Chú"
+"TC-01","Module 1 - Auth","Đăng ký tài khoản mới","1. Vào /register
+2. Nhập Email, mật khẩu và Họ tên
+3. Nhấn Đăng ký","Đăng ký thành công, chuyển hướng về /onboarding. Profile được lưu trong DB.","PASS (Thành công)","Đã xác minh qua Supabase Auth và bảng profiles."
+"TC-02","Module 1 - Auth","Đăng nhập tài khoản","1. Vào /login
+2. Nhập email/mật khẩu vừa tạo
+3. Nhấn Đăng nhập","Đăng nhập thành công, chuyển hướng đến /dashboard hoặc /onboarding.","PASS (Thành công)","Đã kiểm tra chuyển hướng tự động thành công."
+"TC-03","Module 1 - Auth","Bảo vệ tuyến đường (Middleware)","1. Đăng xuất
+2. Truy cập trực tiếp vào /dashboard hoặc /review/[jobId]","Bị Middleware chặn lại và tự động chuyển hướng về /login.","PASS (Thành công)","Đã kiểm tra tính an toàn của router."
+"TC-04","Module 1 - Auth","Trải nghiệm quên mật khẩu","1. Vào /login
+2. Nhấn nút Quên mật khẩu? / Forgot password?","Xuất hiện Toast thông báo màu xanh dương hướng dẫn liên hệ Admin để khôi phục mật khẩu.","PASS (Thành công)","Toast hiển thị đẹp mắt với Framer Motion."
+"TC-05","Module 2 - Brand Vault","Phân tích bài viết mẫu (Flow A - Text)","1. Chọn luồng Tôi có bài viết sẵn
+2. Dán đoạn văn bản mẫu dài > 100 từ
+3. Nhấn Tạo Brand Vault","Giao diện chuyển sang màn hình AnalyzingLoader. Inngest job chạy ngầm phân tích và chuyển sang trang confirm.","PASS (Thành công)","Đã kiểm tra tích hợp Inngest local thành công."
+"TC-06","Module 2 - Brand Vault","Phân tích qua liên kết (Flow A - URL)","1. Chọn luồng Tôi có bài viết sẵn
+2. Nhập một URL bài viết thực tế hợp lệ
+3. Nhấn Tạo Brand Vault","Next.js cào được text từ URL. Phân tích thành công bằng AI chạy ngầm và chuyển về trang xác nhận.","PASS (Thành công)","Cào dữ liệu tốt bằng JSDOM & Readability."
+"TC-07","Module 2 - Brand Vault","Khởi tạo từ khảo sát (Flow B - Form)","1. Chọn luồng Tôi chưa có gì (Form)
+2. Nhập chủ đề, chọn Tone/Style và dán câu mẫu
+3. Nhấn Tạo Brand Vault","Gọi API /api/brand-vault/from-form chạy đồng bộ. Chuyển hướng ngay tới trang xác nhận sau 2-3s.","PASS (Thành công)","Chạy đồng bộ trực tiếp cực kỳ nhanh và mượt mà."
+"TC-08","Module 2 - Brand Vault","Chỉnh sửa tags và Lưu trữ","1. Tại trang /onboarding/confirm, bấm xóa tag
+2. Bấm nút + Thêm / Add, nhập tag mới
+3. Nhấn Lưu Brand Vault","Tag được xóa/thêm mới ngay trên giao diện. Bấm Save hiển thị Toast thành công và chuyển hướng về /dashboard.","PASS (Thành công)","Tính năng click nút + Thêm qua prompt hoạt động rất tốt."
+"TC-09","Module 3 - Repurposing","Cảnh báo chưa có Brand Vault","1. Đăng ký tài khoản mới chưa cấu hình Brand Vault.
+2. Cố tình truy cập /dashboard/new","Giao diện hiển thị cảnh báo đẹp mắt. Nút tạo Job bị vô hiệu hóa.","PASS (Thành công)","Tránh được lỗi treo loading của phiên bản trước."
+"TC-10","Module 3 - Repurposing","Tạo Job chuyển đổi nội dung","1. Có Brand Vault hợp lệ.
+2. Vào /dashboard/new
+3. Nhập Tiêu đề, chọn Nguồn (Text), chọn 3 kênh (LinkedIn, Facebook, Twitter) và nhấn Tạo bài viết","Job đưa vào hàng đợi với trạng thái pending/processing. Gemini xử lý song song thành công cho cả 3 kênh.","PASS (Thành công)","Đã kiểm tra Parallel Generation trên Inngest thành công."
+"TC-11","Module 4 - Review","Soạn thảo & Tự động lưu (Autosave)","1. Vào /review/[jobId] chi tiết.
+2. Tại Tab LinkedIn, chỉnh sửa nội dung bài viết.
+3. Dừng gõ phím 1.5 giây","Trạng thái góc trên hiện Đang lưu... và chuyển sang Đã lưu sau 1 giây debounce.","PASS (Thành công)","Đã kiểm tra API PATCH lưu trữ DB thành công."
+"TC-12","Module 4 - Review","Tạo lại nội dung phiên bản mới (Regenerate)","1. Nhấn nút Tạo lại / Regenerate","Bài viết chuyển sang trạng thái loading Skeleton. Gemini viết lại bài mới dựa trên bài gốc và Brand Voice. Bản mới tăng version.","PASS (Thành công)","Đã thay thế alert bằng Toast UI khi có lỗi thành công."
+"TC-13","Module 4 - Review","Sao chép bài viết (Copy)","1. Nhấn nút Copy dưới chân bài viết","Hệ thống copy bài đăng vào bộ nhớ tạm và hiển thị Toast màu xanh lá Đã copy thành công!.","PASS (Thành công)","Đã kiểm tra clipboard hoạt động chuẩn."
+"TC-14","Module 5 - Polish & UX","Hiệu ứng tải trang (Skeletons)","1. Truy cập vào /dashboard hoặc /review/[jobId] với mạng chậm","Hiển thị khung xương xám chuyển động (Skeleton Loading) tại vùng chứa bảng và khung soạn thảo.","PASS (Thành công)","Cải thiện đáng kể trải nghiệm người dùng so với màn hình trắng."
+"TC-15","Module 5 - Polish & UX","Tự động thử lại khi gọi AI lỗi (AI Retry)","1. Giả lập mạng bị ngắt kết nối tạm thời hoặc Gemini trả về lỗi 503","Lớp bọc generateContentWithRetry tự động bắt lỗi, dừng chờ 2 giây và thử gọi lại lần 2 thành công.","PASS (Thành công)","Giảm thiểu tỷ lệ thất bại của các background job."
