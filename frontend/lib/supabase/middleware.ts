@@ -34,7 +34,10 @@ export async function updateSession(request: NextRequest) {
 
   // Public routes that don't require auth
   const publicRoutes = ['/', '/login', '/register']
-  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/api/inngest')
+  // Extension API uses Bearer token (not cookies) — must bypass session check
+  // Auth is handled per-route in /api/extension/* via api_keys lookup
+  const isExtensionApi = pathname.startsWith('/api/extension/') || pathname === '/api/extension'
+  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/api/inngest') || isExtensionApi
 
   // If not logged in and trying to access protected route → redirect to login
   if (!user && !isPublicRoute) {
