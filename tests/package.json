@@ -1,0 +1,17 @@
+{
+  "name": "amplify-extension-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:migration": "node verify-migration.mjs",
+    "test:key-flow": "node test-key-flow.mjs",
+    "test:status": "node test-status-endpoint.mjs",
+    "test:tasks": "node test-tasks-endpoint.mjs",
+    "test:multi-user": "node test-multi-user.mjs",
+    "test:all": "node run-all.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
