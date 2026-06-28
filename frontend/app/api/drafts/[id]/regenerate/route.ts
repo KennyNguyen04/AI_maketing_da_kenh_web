@@ -57,13 +57,7 @@ export async function POST(
     // 4. Generate new content
     const newContent = await repurposeContentAI(vault.system_prompt, job.source_content, oldDraft.channel)
 
-    // 5. Set old draft is_current = false
-    await supabase
-      .from('drafts')
-      .update({ is_current: false })
-      .eq('id', oldDraft.id)
-
-    // 6. Insert new draft
+    // 5. Insert new draft first (safer — old draft stays intact if insert fails)
     const { data: newDraft, error: insertError } = await supabase
       .from('drafts')
       .insert({
@@ -82,6 +76,12 @@ export async function POST(
     if (insertError || !newDraft) {
       return NextResponse.json({ error: 'Failed to save new draft' }, { status: 500 })
     }
+
+    // 6. Mark old draft inactive only after new draft exists
+    await supabase
+      .from('drafts')
+      .update({ is_current: false })
+      .eq('id', oldDraft.id)
 
     return NextResponse.json({ draft: newDraft })
   } catch (error: unknown) {

@@ -7,9 +7,11 @@ import { inngest } from './client'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { extractTextFromUrl } from './helpers'
 
+type DraftResult = { channel: string; content: string; error: string | null }
+
 // ─── Event: Repurpose Content ───
 export const repurposeContent = inngest.createFunction(
-  { id: 'repurpose-content' },
+  { id: 'repurpose-content', retries: 3 },
   { event: 'repurpose/start' },
   async ({ event, step }) => {
     const { jobId, userId, brandVaultId, sourceContent, sourceType, channels } = event.data
@@ -48,26 +50,26 @@ export const repurposeContent = inngest.createFunction(
     })
 
     // Step 4: Run AI generation for each channel in parallel
-    const draftResults = await step.run('generate-drafts', async () => {
+    const draftResults: DraftResult[] = await step.run('generate-drafts', async () => {
       const { repurposeContentAI } = await import('@/lib/ai')
       const results = await Promise.all(
         channels.map(async (channel: string) => {
           try {
             const content = await repurposeContentAI(vault.system_prompt, actualContent, channel)
-            return { channel, content, error: null }
+            return { channel, content, error: null } satisfies DraftResult
           } catch (err: unknown) {
-            return { channel, content: '', error: err instanceof Error ? err.message : String(err) }
+            return { channel, content: '', error: err instanceof Error ? err.message : String(err) } satisfies DraftResult
           }
         })
       )
       return results
     })
 
-    // Step 5: Save drafts and update job status
+    // Step 5: Save drafts and update job status (idempotent + error-aware)
     await step.run('save-drafts-and-finish', async () => {
       const draftsToInsert = draftResults
-        .filter((r) => !r.error)
-        .map((r) => ({
+        .filter((r: DraftResult) => !r.error)
+        .map((r: DraftResult) => ({
           job_id: jobId,
           user_id: userId,
           channel: r.channel,
@@ -76,22 +78,31 @@ export const repurposeContent = inngest.createFunction(
           version: 1,
         }))
 
+      const allFailed = draftResults.length > 0 && draftResults.every((r: DraftResult) => r.error)
+      const firstError = draftResults.find((r: DraftResult) => r.error)?.error || null
+
       if (draftsToInsert.length > 0) {
         const { error: insertError } = await supabaseAdmin
           .from('drafts')
           .insert(draftsToInsert)
-        if (insertError) throw new Error(`Failed to insert drafts: ${insertError.message}`)
+        if (insertError) {
+          await supabaseAdmin
+            .from('repurpose_jobs')
+            .update({ status: 'failed', error_message: `Failed to insert drafts: ${insertError.message}` })
+            .eq('id', jobId)
+            .eq('status', 'processing')
+          throw new Error(`Failed to insert drafts: ${insertError.message}`)
+        }
       }
 
-      // Check if all failed
-      const allFailed = draftResults.every(r => r.error)
-      const status = allFailed ? 'failed' : 'done'
-      const error_message = allFailed ? draftResults[0].error : null
-
+      // Always finalize: don't leave job stuck in 'processing'
+      const finalStatus = allFailed ? 'failed' : 'done'
+      const finalError = allFailed ? firstError : null
       const { error: updateError } = await supabaseAdmin
         .from('repurpose_jobs')
-        .update({ status, error_message })
+        .update({ status: finalStatus, error_message: finalError })
         .eq('id', jobId)
+        .eq('status', 'processing') // only flip from processing — idempotent
       if (updateError) throw new Error(`Failed to finish job: ${updateError.message}`)
     })
 

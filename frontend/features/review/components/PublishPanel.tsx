@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink, Facebook, Linkedin, Loader2, Send, Twitter } from 'lucide-react'
+import { ExternalLink, Facebook, Linkedin, Loader2, RotateCcw, Send, Twitter, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { TimeSlotPicker } from '@/features/scheduler'
 import type { SocialAccount } from '@/lib/types'
 
 interface DraftForPublish {
@@ -12,7 +13,16 @@ interface DraftForPublish {
   content: string
 }
 
-type BusyState = 'x' | 'facebook' | 'fallback' | null
+interface PublishAttempt {
+  id: string
+  provider: 'x' | 'facebook'
+  status: 'draft' | 'publishing' | 'published' | 'failed'
+  error_message?: string
+  external_post_url?: string
+  created_at: string
+}
+
+type BusyState = 'x' | 'facebook' | 'fallback' | 'retry' | 'schedule' | null
 
 export function PublishPanel({ draft, content }: { draft: DraftForPublish; content: string }) {
   const [accounts, setAccounts] = useState<SocialAccount[]>([])
@@ -23,6 +33,11 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
   const [xOpen, setXOpen] = useState(false)
   const [facebookOpen, setFacebookOpen] = useState(false)
   const [linkedinOpen, setLinkedinOpen] = useState(false)
+  const [failedAttempts, setFailedAttempts] = useState<PublishAttempt[]>([])
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+
+  const canSchedule = draft.channel === 'twitter' || draft.channel === 'facebook'
+  const scheduleChannelLabel = draft.channel === 'twitter' ? 'X' : 'Facebook'
 
   useEffect(() => {
     async function loadAccounts() {
@@ -52,11 +67,49 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
         body: JSON.stringify({ provider, account_id: accountId }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Publish failed')
+      if (!res.ok) {
+        const errorMsg = data.error || 'Publish failed'
+        // Check if it's rate limit error
+        if (data.code === 'RATE_LIMIT_EXCEEDED') {
+          setMessage(`Rate limit: ${errorMsg}`)
+        } else {
+          throw new Error(errorMsg)
+        }
+        return
+      }
       setPublishedUrl(data.externalPostUrl)
       setMessage(provider === 'x' ? 'Đã đăng lên X.' : 'Đã đăng lên Facebook Page.')
       setXOpen(false)
       setFacebookOpen(false)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function retryPublish(provider: 'x' | 'facebook') {
+    setBusy('retry')
+    setMessage('')
+    setPublishedUrl('')
+    try {
+      const res = await fetch(`/api/publish/${draft.id}/retry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        const errorMsg = data.error || 'Retry failed'
+        if (data.code === 'RATE_LIMIT_EXCEEDED') {
+          setMessage(`Rate limit: ${errorMsg}`)
+        } else {
+          throw new Error(errorMsg)
+        }
+        return
+      }
+      setPublishedUrl(data.externalPostUrl)
+      setMessage(`Đã đăng thành công lên ${provider === 'x' ? 'X' : 'Facebook'}.`)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error))
     } finally {
@@ -94,6 +147,27 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
     setLinkedinOpen(false)
   }
 
+  async function handleSchedule(draftId: string, scheduledFor: Date) {
+    setBusy('schedule')
+    setMessage('')
+    try {
+      const res = await fetch(`/api/schedule/${draftId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduledFor: scheduledFor.toISOString() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to schedule')
+      }
+      setMessage(`Đã lên lịch đăng bài vào ${scheduledFor.toLocaleString('vi-VN')}`)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
     <Card className="space-y-4 p-4">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -102,7 +176,11 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
           <p className="mt-1 max-w-2xl text-xs leading-5 text-app-muted">
             Mỗi nút Prepare chỉ mở bước xem lại. Amplify không tự đăng nếu bạn chưa xác nhận.
           </p>
-          {message ? <p className="mt-3 text-xs font-medium text-regal-violet">{message}</p> : null}
+          {message ? (
+            <p className={`mt-3 text-xs font-medium ${message.includes('thành công') || message.includes('Đã đăng') ? 'text-regal-violet' : 'text-vibrant-orange'}`}>
+              {message}
+            </p>
+          ) : null}
           {publishedUrl ? (
             <a href={publishedUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-sky-blue">
               Xem bài đã đăng <ExternalLink className="h-3 w-3" />
@@ -119,6 +197,12 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
           <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => setLinkedinOpen(true)}>
             <Linkedin className="h-4 w-4" /> Prepare LinkedIn
           </Button>
+          {canSchedule && (
+            <Button size="sm" variant="white" disabled={busy !== null} onClick={() => setShowScheduleModal(true)}>
+              {busy === 'schedule' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+              Lên lịch {scheduleChannelLabel}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -151,6 +235,12 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
                 {busy === 'x' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Đăng lên X
               </Button>
+              {xAccount && (
+                <Button variant="white" onClick={() => retryPublish('x')} disabled={busy !== null}>
+                  {busy === 'retry' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  Thử lại
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -178,6 +268,12 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
                   {busy === 'facebook' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   Đăng lên Page
                 </Button>
+                {facebookAccount && (
+                  <Button variant="white" onClick={() => retryPublish('facebook')} disabled={busy !== null}>
+                    {busy === 'retry' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                    Thử lại
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -209,6 +305,15 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
           </div>
         </div>
       ) : null}
+
+      {/* Schedule Modal */}
+      <TimeSlotPicker
+        isOpen={showScheduleModal}
+        draftId={draft.id}
+        channel={draft.channel}
+        onClose={() => setShowScheduleModal(false)}
+        onSchedule={handleSchedule}
+      />
     </Card>
   )
 }

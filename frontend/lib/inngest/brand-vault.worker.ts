@@ -10,7 +10,7 @@ import { extractTextFromUrl } from './helpers'
 
 // ─── Event: Analyze Text ───
 export const analyzeBrandVaultText = inngest.createFunction(
-  { id: 'analyze-brand-vault-text' },
+  { id: 'analyze-brand-vault-text', retries: 3 },
   { event: 'brand_vault/analyze.text' },
   async ({ event, step }) => {
     const { text, userId, vaultId } = event.data
@@ -23,7 +23,7 @@ export const analyzeBrandVaultText = inngest.createFunction(
     // Step 2: Save to Database
     await step.run('save-to-supabase', async () => {
       const systemPrompt = voiceProfile.system_prompt_cache
-      
+
       const { error } = await supabaseAdmin
         .from('brand_vaults')
         .update({
@@ -45,7 +45,7 @@ export const analyzeBrandVaultText = inngest.createFunction(
 
 // ─── Event: Analyze URL ───
 export const analyzeBrandVaultUrl = inngest.createFunction(
-  { id: 'analyze-brand-vault-url' },
+  { id: 'analyze-brand-vault-url', retries: 3 },
   { event: 'brand_vault/analyze.url' },
   async ({ event, step }) => {
     const { url, userId, vaultId } = event.data
@@ -63,7 +63,7 @@ export const analyzeBrandVaultUrl = inngest.createFunction(
     // Step 3: Save to Database
     await step.run('save-to-supabase', async () => {
       const systemPrompt = voiceProfile.system_prompt_cache
-      
+
       const { error } = await supabaseAdmin
         .from('brand_vaults')
         .update({

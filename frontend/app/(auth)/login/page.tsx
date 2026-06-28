@@ -25,7 +25,7 @@ export default function LoginPage() {
     setLoading(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError(error.message === 'Invalid login credentials'
@@ -35,8 +35,14 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/dashboard')
-    router.refresh()
+    if (!data.session) {
+      setError('Đăng nhập thất bại: không tạo được phiên / Failed to establish session.')
+      setLoading(false)
+      return
+    }
+
+    // Hard navigation to ensure auth cookies are set before middleware runs
+    window.location.href = '/dashboard'
   }
 
   return (

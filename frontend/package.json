@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "inngest:dev": "npx inngest-cli@latest dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components features lib middleware.ts next.config.ts --no-cache",
@@ -12,6 +13,7 @@
   "dependencies": {
     "@google/genai": "^2.3.0",
     "@mozilla/readability": "^0.6.0",
+    "@radix-ui/react-dialog": "^1.1.17",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "clsx": "^2.1.1",
@@ -21,10 +23,12 @@
     "lucide-react": "^0.561.0",
     "next": "15.5.18",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^24.10.1",

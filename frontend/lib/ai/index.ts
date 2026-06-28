@@ -4,6 +4,7 @@
  */
 
 import { generateContentWithRetry, MODEL_NAME } from './client'
+import { getGenerationConfig, VOICE_ANALYSIS_CONFIG } from './config'
 import { VOICE_ANALYSIS_PROMPT, VOICE_FROM_FORM_PROMPT, REPURPOSE_PROMPT_TEMPLATES } from './prompts'
 import { cleanAndParseJson } from './parser'
 
@@ -14,7 +15,9 @@ export async function analyzeVoice(text: string) {
   try {
     const response = await generateContentWithRetry(
       MODEL_NAME,
-      VOICE_ANALYSIS_PROMPT + text
+      VOICE_ANALYSIS_PROMPT + text,
+      4,
+      VOICE_ANALYSIS_CONFIG
     )
 
     const responseText = response.text || ''
@@ -46,7 +49,9 @@ export async function analyzeVoiceFromForm(data: { topics: string; tone: string;
 
     const response = await generateContentWithRetry(
       MODEL_NAME,
-      prompt
+      prompt,
+      4,
+      VOICE_ANALYSIS_CONFIG
     )
 
     const responseText = response.text || ''
@@ -71,6 +76,9 @@ export async function repurposeContentAI(systemPrompt: string, sourceContent: st
   const instructions = REPURPOSE_PROMPT_TEMPLATES[channel]
   if (!instructions) throw new Error(`Unknown channel: ${channel}`)
 
+  // Get platform-specific generation config
+  const genConfig = getGenerationConfig(channel)
+
   const prompt = `System: ${systemPrompt}
 
 User: Dựa trên bài viết gốc dưới đây, hãy viết lại nội dung phù hợp.
@@ -82,7 +90,9 @@ ${sourceContent}`
   try {
     const response = await generateContentWithRetry(
       MODEL_NAME,
-      prompt
+      prompt,
+      4,
+      genConfig
     )
 
     return response.text || ''

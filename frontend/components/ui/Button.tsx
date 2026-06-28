@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { clsx } from 'clsx'
 
 export interface ButtonProps {
-  variant?: 'primary' | 'ghost' | 'danger' | 'green' | 'white'
+  variant?: 'primary' | 'ghost' | 'danger' | 'green' | 'white' | 'outline'
   size?: 'sm' | 'md' | 'lg'
   isLoading?: boolean
   disabled?: boolean
@@ -30,6 +30,7 @@ export function Button({
     danger: 'border-sunset-orange bg-sunset-orange text-pure-canvas hover:bg-sunset-orange/90',
     green: 'border-forest-fern bg-forest-fern text-pure-canvas hover:bg-forest-fern/90',
     white: 'border-app-line bg-pure-canvas text-midnight-ink hover:bg-app-bg',
+    outline: 'border-app-line bg-transparent text-midnight-ink hover:bg-app-bg/50',
   }
   const sizes = {
     sm: 'h-9 px-3 text-sm',

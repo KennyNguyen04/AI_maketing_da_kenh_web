@@ -1,6 +1,7 @@
 'use client'
 
 import { clsx } from 'clsx'
+import { useId } from 'react'
 
 export interface InputProps {
   type?: 'text' | 'email' | 'password' | 'url' | 'textarea'
@@ -8,6 +9,7 @@ export interface InputProps {
   placeholder?: string
   value: string
   onChange: (val: string) => void
+  onKeyDown?: (e: React.KeyboardEvent) => void
   error?: string
   helper?: string
   required?: boolean
@@ -22,6 +24,7 @@ export function Input({
   placeholder,
   value,
   onChange,
+  onKeyDown,
   error,
   helper,
   required,
@@ -29,43 +32,41 @@ export function Input({
   rows,
   className,
 }: InputProps) {
+  const generatedId = useId()
+  const inputId = label ? `input-${generatedId}` : undefined
+
   const inputClass = clsx(
     'w-full rounded-card border border-app-line bg-pure-canvas px-3 py-2.5 text-sm text-midnight-ink placeholder:text-app-muted outline-none transition focus:border-sky-blue focus:ring-2 focus:ring-sky-blue/15 disabled:opacity-60',
     type === 'textarea' && 'min-h-[120px] resize-y',
     className,
   )
 
+  const inputProps = {
+    id: inputId,
+    placeholder,
+    value,
+    disabled,
+    required,
+    className: inputClass,
+    onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value),
+    onKeyDown,
+  }
+
   return (
-    <label className="block">
+    <div className="flex flex-col gap-1">
       {label ? (
-        <span className="mb-2 block text-sm font-medium text-midnight-ink">
+        <label htmlFor={inputId} className="text-sm font-medium text-midnight-ink">
           {label}
           {required ? ' *' : ''}
-        </span>
+        </label>
       ) : null}
       {type === 'textarea' ? (
-        <textarea
-          rows={rows}
-          placeholder={placeholder}
-          value={value}
-          disabled={disabled}
-          required={required}
-          onChange={(event) => onChange(event.target.value)}
-          className={inputClass}
-        />
+        <textarea rows={rows} {...inputProps} />
       ) : (
-        <input
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          disabled={disabled}
-          required={required}
-          onChange={(event) => onChange(event.target.value)}
-          className={inputClass}
-        />
+        <input type={type} {...inputProps} />
       )}
-      {helper ? <span className="mt-2 block text-xs text-app-muted">{helper}</span> : null}
-      {error ? <span className="mt-2 block text-xs text-sunset-orange">{error}</span> : null}
-    </label>
+      {helper ? <span className="text-xs text-app-muted">{helper}</span> : null}
+      {error ? <span className="text-xs text-sunset-orange">{error}</span> : null}
+    </div>
   )
 }

@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Amplify Auto Poster",
+  "version": "1.0.0",
+  "description": "Auto post AI-generated content to Facebook, X, Threads, Instagram.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://localhost:3001/*",
+    "https://www.facebook.com/*",
+    "https://www.instagram.com/*",
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://www.threads.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+      "default_icon": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+      }
+  },
+  "content_scripts": [
+    {
+      "js": ["content/inject.js"],
+      "matches": [
+        "https://www.facebook.com/*",
+        "https://www.instagram.com/*",
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://www.threads.net/*"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

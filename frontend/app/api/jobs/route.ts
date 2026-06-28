@@ -14,11 +14,29 @@ import {
 export async function POST(request: Request) {
   const log = createRequestLogger('/api/jobs', 'POST')
   try {
+    const idempotencyKey = request.headers.get('Idempotency-Key')
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Idempotency: if same key was used within 5 minutes, return the existing job
+    if (idempotencyKey) {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+      const { data: existing } = await supabase
+        .from('repurpose_jobs')
+        .select('id, created_at')
+        .eq('user_id', user.id)
+        .eq('idempotency_key', idempotencyKey)
+        .gte('created_at', fiveMinutesAgo)
+        .single()
+
+      if (existing) {
+        log.done(200, { userId: user.id, jobId: existing.id, source: 'idempotent' })
+        return NextResponse.json({ jobId: existing.id, status: 'pending', idempotent: true })
+      }
     }
 
     const body = await request.json()
@@ -77,6 +95,7 @@ export async function POST(request: Request) {
         source_content: sourceContent,
         channels,
         status: 'pending',
+        ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
       })
       .select('id')
       .single()

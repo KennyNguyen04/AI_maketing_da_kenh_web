@@ -1,20 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, Circle, AlertCircle, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
+
+const MAX_POLL_ATTEMPTS = 150 // ~5 minutes at 2s interval
 
 export function JobStatusPoller({ jobId }: { jobId: string }) {
   const router = useRouter()
   const [status, setStatus] = useState<string>('pending')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  
-  // MOCK steps for UI purely for visual feedback since we don't track per-channel status yet
+
+  // Visual progress effect
   const [completedSteps, setCompletedSteps] = useState<number>(0)
-  
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const attemptsRef = useRef(0)
+
+  const stopPolling = () => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }
+
   useEffect(() => {
-    // Visual progress effect
     const timer = setInterval(() => {
       setCompletedSteps(c => (c < 4 ? c + 1 : c))
     }, 1500)
@@ -24,20 +35,30 @@ export function JobStatusPoller({ jobId }: { jobId: string }) {
   useEffect(() => {
     if (!jobId) return
     if (status === 'done' || status === 'failed') return
+    if (intervalRef.current !== null) return // already polling
 
-    const interval = setInterval(async () => {
+    intervalRef.current = setInterval(async () => {
+      attemptsRef.current += 1
+
+      if (attemptsRef.current >= MAX_POLL_ATTEMPTS) {
+        stopPolling()
+        setStatus('failed')
+        setErrorMsg('Quá thời gian chờ. Vui lòng thử lại.')
+        return
+      }
+
       try {
         const res = await fetch(`/api/jobs/${jobId}`)
         const data = await res.json()
-        
+
         if (data.job) {
           setStatus(data.job.status)
           if (data.job.status === 'failed') {
+            stopPolling()
             setErrorMsg(data.job.error_message || 'Tạo nội dung thất bại.')
           }
           if (data.job.status === 'done') {
-            clearInterval(interval)
-            // Wait a moment for UX before redirecting
+            stopPolling()
             setTimeout(() => {
               router.push(`/review/${jobId}`)
             }, 1000)
@@ -48,7 +69,7 @@ export function JobStatusPoller({ jobId }: { jobId: string }) {
       }
     }, 2000)
 
-    return () => clearInterval(interval)
+    return () => stopPolling()
   }, [jobId, status, router])
 
   const steps = [

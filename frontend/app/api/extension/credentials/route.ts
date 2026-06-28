@@ -8,10 +8,9 @@ export async function GET(request: Request) {
     if (!userId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
     const { data: accounts } = await supabaseAdmin
-      .from('social_accounts')
-      .select('id, platform, username, access_token, access_token_secret, config')
+      .from('social_targets')
+      .select('id, provider, display_name, access_token_encrypted, config')
       .eq('user_id', userId)
-      .eq('is_active', true)
 
     return NextResponse.json({ credentials: accounts || [] })
   } catch (error) {
@@ -29,10 +28,10 @@ export async function PUT(request: Request) {
     if (!account_id) return NextResponse.json({ error: 'Missing account_id' }, { status: 400 })
 
     const updates: Record<string, unknown> = {}
-    if (access_token) updates.access_token = access_token
+    if (access_token) updates.access_token_encrypted = access_token
     if (access_token_secret) updates.access_token_secret = access_token_secret
 
-    const { error } = await supabaseAdmin.from('social_accounts').update(updates).eq('id', account_id).eq('user_id', userId)
+    const { error } = await supabaseAdmin.from('social_targets').update(updates).eq('id', account_id).eq('user_id', userId)
     if (error) return NextResponse.json({ error: 'Update failed' }, { status: 500 })
 
     return NextResponse.json({ ok: true })

@@ -1,9 +1,32 @@
+'use client'
+
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from './EmptyState'
 import { JobCard } from './JobCard'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function JobList({ jobs }: { jobs: any[] }) {
+interface JobListProps {
+  jobs: any[]
+  loading?: boolean
+}
+
+export function JobList({ jobs, loading = false }: JobListProps) {
+  if (loading) {
+    return (
+      <Card className="overflow-hidden p-0">
+        <div className="space-y-0 divide-y divide-app-line">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex animate-pulse items-center gap-4 px-4 py-4">
+              <div className="h-4 w-1/2 rounded bg-light-gray" />
+              <div className="hidden h-4 w-24 rounded bg-light-gray sm:block" />
+              <div className="hidden h-4 w-20 rounded bg-light-gray md:block" />
+              <div className="ml-auto h-6 w-16 rounded-full bg-light-gray" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    )
+  }
+
   if (!jobs || jobs.length === 0) {
     return <EmptyState />
   }

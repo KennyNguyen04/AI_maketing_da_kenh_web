@@ -51,21 +51,64 @@ export const REPURPOSE_PROMPT_TEMPLATES: Record<string, string> = {
 - Bắt đầu bằng một câu hook mạnh (không bắt đầu bằng "Tôi")
 - Có 1-2 insight chính
 - Kết thúc bằng một câu hỏi để tạo engagement
-- Không dùng quá 3 hashtag
+- Không dùng quá 3 hashtag (viết HOA hoặc PascalCase)
+- Hạn chế emoji, ưu tiên nội dung có giá trị
 - Giữ đúng giọng văn đã chỉ định trong system prompt`,
-  
+
   'linkedin_thread': `Yêu cầu:
 Viết một LinkedIn thread gồm 5-7 posts ngắn.
 Post 1: Hook + setup vấn đề
 Post 2-5: Mỗi post là một insight hoặc bước
 Post cuối: Takeaway + CTA
-Phân cách mỗi post bằng "---"`,
-  
+Phân cách mỗi post bằng "---"
+Mỗi post không quá 300 ký tự.`,
+
+  'linkedin_carousel': `Yêu cầu:
+Viết nội dung cho một LinkedIn carousel (slide deck).
+Format: Mỗi slide cách nhau bằng "---SLIDE---"
+Slide 1: Title (tiêu đề hấp dẫn)
+Slide 2-8: Nội dung mỗi slide (tối đa 150 ký tự)
+Slide cuối: CTA + hashtags
+Tổng cộng 8-10 slides.
+Không emoji, giữ chuyên nghiệp.`,
+
   'facebook': `Yêu cầu:
-Viết một Facebook post casual hơn, có thể dài hơn, kể chuyện nhiều hơn.
-Độ dài 200-400 từ. Tone gần gũi hơn LinkedIn.`,
-  
+Viết một Facebook post casual, kể chuyện, gần gũi.
+Độ dài 200-400 từ.
+Có thể dùng emoji một cách tự nhiên (1-3 emoji per post)
+Có hook ở đầu để thu hút attention
+Kết thúc bằng câu hỏi hoặc CTA nhẹ nhàng
+1-5 hashtags ở cuối`,
+
   'twitter': `Yêu cầu:
 Viết một tweet ngắn dưới 280 ký tự.
-Hook mạnh, một insight duy nhất, không hashtag.`
+Hook mạnh, một insight duy nhất.
+Có thể dùng emoji một cách có chọn lọc (1-2 emoji)
+Không hashtag hoặc tối đa 1 hashtag
+Thoại tự nhiên, không quá formal`,
+
+  'x': `Yêu cầu:
+Viết một X post ngắn dưới 280 ký tự.
+Hook gây tò mò hoặc gây debate nhẹ.
+Một insight hoặc opinion rõ ràng.
+Emoji được khuyến khích (1-3 emoji)
+Không hashtag hoặc tối đa 1 hashtag
+Có thể kết thúc bằng một câu hỏi để tăng engagement`,
+
+  'x_thread': `Yêu cầu:
+Viết một X thread gồm 2-4 tweets liên tiếp.
+Tweet 1: Hook để thu hút người đọc click vào thread
+Tweet 2-3: Nội dung chính, mỗi tweet dưới 250 ký tự
+Tweet cuối: Takeaway + CTA (follow, quote tweet, etc.)
+Phân cách mỗi tweet bằng "---"
+Có thể dùng emoji tự nhiên`,
+
+  'instagram': `Yêu cầu:
+Viết caption cho Instagram post.
+Độ dài: 150-300 từ.
+Bắt đầu bằng hook trong 2-3 dòng đầu (thu hút người đọc "keep reading")
+Phần chính có giá trị (story, insight, hoặc value)
+CTA ở cuối
+8-15 hashtags (viết thường, cách nhau dấu cách)
+Có thể dùng line breaks để dễ đọc`
 }

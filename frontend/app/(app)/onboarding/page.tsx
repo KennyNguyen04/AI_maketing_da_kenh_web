@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { AnalyzingLoader } from '@/features/brand-vault/components/AnalyzingLoader'
@@ -9,17 +9,34 @@ import { BrandVaultSetupText } from '@/features/brand-vault/components/BrandVaul
 import { FlowSelector, OnboardingFlow } from '@/features/brand-vault/components/FlowSelector'
 import { createClient } from '@/lib/supabase/client'
 
+const POLL_INTERVAL_MS = 2000
+const MAX_POLL_ATTEMPTS = 150 // ~5 minutes
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [flow, setFlow] = useState<OnboardingFlow>('content')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollAttemptsRef = useRef(0)
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => stopPolling()
+  }, [stopPolling])
 
   async function handleTextSubmit(mode: string, value: string) {
     setLoading(true)
     setError('')
-    
+    pollAttemptsRef.current = 0
+
     try {
       const endpoint = mode === 'url' ? '/api/brand-vault/analyze-url' : '/api/brand-vault/analyze-text'
       const payload = mode === 'url' ? { url: value } : { text: value }
@@ -37,26 +54,43 @@ export default function OnboardingPage() {
 
       const { vaultId } = await res.json()
 
-      // Polling Supabase until is_active is true
-      const interval = setInterval(async () => {
+      pollIntervalRef.current = setInterval(async () => {
+        pollAttemptsRef.current += 1
+
+        if (pollAttemptsRef.current >= MAX_POLL_ATTEMPTS) {
+          stopPolling()
+          setLoading(false)
+          setError('Quá thời gian chờ phân tích. Vui lòng thử lại.')
+          return
+        }
+
         const { data, error } = await supabase
           .from('brand_vaults')
-          .select('is_active')
+          .select('is_active, user_id')
           .eq('id', vaultId)
           .single()
 
+        // IDOR defense: verify vault belongs to current user
+        const { data: userData } = await supabase.auth.getUser()
+        if (!userData.user || data?.user_id !== userData.user.id) {
+          stopPolling()
+          setLoading(false)
+          setError('Không tìm thấy Brand Vault hoặc bạn không có quyền truy cập')
+          return
+        }
+
         if (error) {
-          clearInterval(interval)
+          stopPolling()
           setLoading(false)
           setError('Lỗi khi lấy dữ liệu: ' + error.message)
           return
         }
 
-        if (data && data.is_active) {
-          clearInterval(interval)
+        if (data?.is_active) {
+          stopPolling()
           router.push(`/onboarding/confirm?vaultId=${vaultId}`)
         }
-      }, 2000) // Poll every 2 seconds
+      }, POLL_INTERVAL_MS)
 
     } catch (err: unknown) {
       console.error(err)
@@ -95,8 +129,19 @@ export default function OnboardingPage() {
   return (
     <motion.div className="mx-auto max-w-[760px]" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
       <div className="mb-10">
-        <p className="text-sm font-medium text-sky-blue">Step 1 of 2 - Xây Brand Vault</p>
-        <div className="mt-3 h-1 rounded-full bg-muted-stone"><div className="h-1 w-1/2 rounded-full bg-sky-blue" /></div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-sky-blue">Bước 1 / 2</p>
+            <p className="mt-1 text-xs text-app-muted">Nhập nội dung để AI phân tích giọng văn</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-sky-blue" />
+            <div className="h-2 w-2 rounded-full bg-muted-stone" />
+          </div>
+        </div>
+        <div className="mt-3 h-1.5 rounded-full bg-muted-stone">
+          <div className="h-1.5 w-1/2 rounded-full bg-sky-blue transition-all" />
+        </div>
       </div>
       {loading ? (
         <AnalyzingLoader />

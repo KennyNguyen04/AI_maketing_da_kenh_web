@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { decryptToken } from '@/lib/social/crypto'
-import { assertUuid, validationErrorResponse } from '@/lib/validation/api'
+import { getValidAccessToken } from '@/lib/social/token-manager'
+import { rateLimiter } from '@/lib/social/rate-limiter'
+import { assertUuid, validationErrorResponse, ApiValidationError } from '@/lib/validation/api'
 import type { SocialProvider } from '@/lib/types'
 
 const VALID_PROVIDERS: SocialProvider[] = ['x', 'facebook']
@@ -25,6 +26,16 @@ export async function POST(
 
     if (!VALID_PROVIDERS.includes(provider)) {
       return NextResponse.json({ error: 'Invalid publish provider' }, { status: 400 })
+    }
+
+    // Validate account_id format if provided
+    if (body.account_id !== undefined && body.account_id !== null && body.account_id !== '') {
+      try { assertUuid(body.account_id, 'account_id') } catch { return NextResponse.json({ error: 'account_id is invalid' }, { status: 400 }) }
+    }
+
+    // Validate mode if provided
+    if (body.mode !== undefined && !['direct', 'fallback'].includes(body.mode)) {
+      return NextResponse.json({ error: 'mode must be direct or fallback' }, { status: 400 })
     }
 
     const { data: draft, error: draftError } = await supabase
@@ -67,7 +78,7 @@ export async function POST(
     }
 
     const { data: account, error: accountError } = await supabase
-      .from('social_accounts')
+      .from('social_targets')
       .select('*')
       .eq('user_id', user.id)
       .eq('provider', provider)
@@ -76,7 +87,7 @@ export async function POST(
 
     const { data: fallbackAccount } = !body.account_id
       ? await supabase
-        .from('social_accounts')
+        .from('social_targets')
         .select('*')
         .eq('user_id', user.id)
         .eq('provider', provider)
@@ -91,24 +102,47 @@ export async function POST(
       return NextResponse.json({ error: `${provider} account is not connected` }, { status: 404 })
     }
 
-    const { data: attempt, error: attemptError } = await supabase
-      .from('publish_attempts')
-      .insert({
-        draft_id: draft.id,
-        user_id: user.id,
-        provider,
-        target_id: selectedAccount.external_account_id,
-        target_name: selectedAccount.display_name,
-        status: 'publishing',
-      })
-      .select('id')
-      .single()
+    // Get valid access token (refresh if needed)
+    const { accessToken } = await getValidAccessToken(selectedAccount)
 
-    if (attemptError || !attempt) {
+    // Check rate limit before publishing
+    const rateCheck = rateLimiter.canPost(user.id, provider)
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: rateCheck.reason || 'Rate limit exceeded',
+          retryAfter: rateCheck.retryAfter,
+          code: 'RATE_LIMIT_EXCEEDED',
+        },
+        { status: 429 }
+      )
+    }
+
+    // Atomic claim via DB function — eliminates race condition between
+    // "check no in-flight publish" and "insert new attempt"
+    const { data: attemptId, error: attemptError } = await supabase.rpc(
+      'claim_publish_attempt',
+      {
+        p_draft_id: draft.id,
+        p_user_id: user.id,
+        p_provider: provider,
+        p_target_id: selectedAccount.external_account_id,
+        p_target_name: selectedAccount.display_name,
+      }
+    )
+
+    if (attemptError) {
       return NextResponse.json({ error: 'Could not create publish attempt' }, { status: 500 })
     }
 
-    const accessToken = decryptToken(selectedAccount.access_token_encrypted)
+    if (!attemptId) {
+      return NextResponse.json(
+        { error: 'Another publish attempt is in progress for this draft' },
+        { status: 409 }
+      )
+    }
+
+    const attempt = { id: attemptId }
 
     if (provider === 'x') {
       const response = await fetch('https://api.x.com/2/tweets', {
@@ -132,6 +166,9 @@ export async function POST(
         .from('publish_attempts')
         .update({ status: 'published', external_post_id: result.data.id, external_post_url: externalUrl })
         .eq('id', attempt.id)
+
+      // Record successful post for rate limiting
+      rateLimiter.recordPost(user.id, provider)
 
       return NextResponse.json({ status: 'published', externalPostId: result.data.id, externalPostUrl: externalUrl })
     }
@@ -157,6 +194,9 @@ export async function POST(
       .from('publish_attempts')
       .update({ status: 'published', external_post_id: facebookResult.id, external_post_url: externalUrl })
       .eq('id', attempt.id)
+
+    // Record successful post for rate limiting
+    rateLimiter.recordPost(user.id, provider)
 
     return NextResponse.json({ status: 'published', externalPostId: facebookResult.id, externalPostUrl: externalUrl })
   } catch (error) {

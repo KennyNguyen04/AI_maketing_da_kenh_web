@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   const { data: accounts, error } = await supabase
-    .from('social_accounts')
+    .from('social_targets')
     .select('id, provider, external_account_id, display_name, account_type, scopes, token_expires_at, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })

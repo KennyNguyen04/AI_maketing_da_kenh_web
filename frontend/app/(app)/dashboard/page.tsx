@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
-import { Plus } from 'lucide-react'
 import Link from 'next/link'
+import { History, Plus, CalendarDays, BarChart3 } from 'lucide-react'
 import { BrandVaultStatus } from '@/features/brand-vault/components/BrandVaultStatus'
 import { JobList } from '@/features/jobs/components/JobList'
+import { PublishHistory } from '@/features/review/components/PublishHistory'
+import { ExtensionStatusCheck } from '@/components/ExtensionStatusCheck'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { createClient } from '@/lib/supabase/server'
@@ -53,12 +55,31 @@ export default async function DashboardPage() {
           <h1 className="mt-1 text-2xl text-midnight-ink md:text-3xl">Xin chào, {firstName}</h1>
           <p className="mt-2 text-sm text-dark-charcoal">Theo dõi nội dung đã tạo, Brand Vault và lịch sử phân phối.</p>
         </div>
-        <Link href="/dashboard/new">
-          <Button>
-            <Plus className="h-4 w-4" /> Tạo nội dung mới
-          </Button>
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/history">
+            <Button variant="white">
+              <History className="h-4 w-4" /> Lịch sử đăng
+            </Button>
+          </Link>
+          <Link href="/scheduler">
+            <Button variant="white">
+              <CalendarDays className="h-4 w-4" /> Lịch đăng bài
+            </Button>
+          </Link>
+          <Link href="/analytics">
+            <Button variant="white">
+              <BarChart3 className="h-4 w-4" /> Thống kê
+            </Button>
+          </Link>
+          <Link href="/dashboard/new">
+            <Button>
+              <Plus className="h-4 w-4" /> Tạo nội dung mới
+            </Button>
+          </Link>
+        </div>
       </header>
+
+      <ExtensionStatusCheck />
 
       <BrandVaultStatus vault={vault} />
 

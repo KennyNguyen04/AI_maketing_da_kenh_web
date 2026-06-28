@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { createClient } from '@/lib/supabase/client'
+import { validatePassword } from '@/lib/utils/password'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -26,15 +27,16 @@ export default function RegisterPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự / Password must be at least 6 characters')
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setError(passwordError)
       return
     }
 
     setLoading(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -48,8 +50,15 @@ export default function RegisterPage() {
       return
     }
 
-    router.push('/onboarding')
-    router.refresh()
+    // Ensure session is established before navigating (so middleware sees auth cookie)
+    if (data.session) {
+      // Hard navigation to ensure auth cookies are set before middleware runs
+      window.location.href = '/onboarding'
+    } else {
+      // Email confirmation required - session not yet established
+      setError('Vui lòng kiểm tra email để xác nhận tài khoản. / Please check your email to confirm your account.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -66,6 +75,9 @@ export default function RegisterPage() {
           <Input label="Họ và tên / Full name" placeholder="Nguyễn Văn A" value={name} onChange={setName} required />
           <Input label="Email" type="email" placeholder="ban@example.com" value={email} onChange={setEmail} required />
           <Input label="Mật khẩu / Password" type="password" value={password} onChange={setPassword} required />
+          <p className="text-xs text-dark-charcoal">
+            Tối thiểu 8 ký tự, gồm chữ và số / Min 8 characters with letters and numbers.
+          </p>
           <Input label="Xác nhận mật khẩu / Confirm password" type="password" value={confirm} onChange={setConfirm} required />
           <p className="text-xs leading-5 text-dark-charcoal">Bằng cách đăng ký, bạn đồng ý với Điều khoản sử dụng.</p>
           <Button type="submit" className="w-full" disabled={loading}>

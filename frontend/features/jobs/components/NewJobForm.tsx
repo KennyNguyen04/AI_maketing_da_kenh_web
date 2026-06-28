@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Check, Facebook, Fingerprint, Linkedin, Link2, Twitter } from 'lucide-react'
+import Link from 'next/link'
+import { Check, Facebook, Fingerprint, Linkedin, Link2, Plus, Twitter } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Channel } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -19,6 +20,13 @@ const channelOptions: { id: Channel; icon: typeof Linkedin; label: string; descr
   { id: 'facebook', icon: Facebook, label: 'Facebook Page', description: 'Bài kể chuyện 200-400 từ' },
   { id: 'twitter', icon: Twitter, label: 'X', description: 'Bản ngắn dưới 280 ký tự' },
 ]
+
+interface Vault {
+  id: string
+  name: string
+  display_name?: string | null
+  is_active: boolean
+}
 
 export function NewJobForm() {
   const searchParams = useSearchParams()
@@ -38,7 +46,8 @@ export function NewJobForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [jobId, setJobId] = useState<string | null>(null)
-  const [vault, setVault] = useState<{ id: string; name: string } | null>(null)
+  const [vaultId, setVaultId] = useState<string | null>(null)
+  const [vaults, setVaults] = useState<Vault[]>([])
   const [isLoadingVault, setIsLoadingVault] = useState(true)
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -61,19 +70,20 @@ export function NewJobForm() {
       setIsLoadingVault(true)
       const { data } = await supabase
         .from('brand_vaults')
-        .select('id, name')
-        .eq('is_active', true)
+        .select('id, name, display_name, is_active')
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
 
-      if (data) {
-        setVault(data)
+      if (data && data.length > 0) {
+        setVaults(data)
+        const activeVault = data.find((item) => item.is_active) || data[0]
+        setVaultId(activeVault.id)
       }
       setIsLoadingVault(false)
     }
     loadVault()
   }, [supabase])
+
+  const activeVault = vaults.find((item) => item.id === vaultId) || vaults[0]
 
   const wordCount = useMemo(() => content.trim().split(/\s+/).filter(Boolean).length, [content])
 
@@ -83,8 +93,8 @@ export function NewJobForm() {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!vault) {
-      const msg = 'Vui lòng thiết lập Brand Vault trước khi tạo nội dung.'
+    if (!vaultId) {
+      const msg = 'Vui lòng chọn Brand Vault trước khi tạo nội dung.'
       setError(msg)
       setToastMessage(msg)
       setToastType('error')
@@ -103,7 +113,7 @@ export function NewJobForm() {
           source_type: mode,
           source_content: mode === 'url' ? url : content,
           channels,
-          brand_vault_id: vault.id,
+          brand_vault_id: vaultId,
           title: title ? title : undefined,
         })
       })
@@ -130,7 +140,7 @@ export function NewJobForm() {
   return (
     <form onSubmit={submit} className="max-w-[820px] space-y-4">
       <Card className="p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-card bg-hint-of-blue text-sky-blue">
               <Fingerprint className="h-5 w-5" />
@@ -139,18 +149,35 @@ export function NewJobForm() {
               <p className="text-sm font-medium text-midnight-ink">Brand Vault</p>
               {isLoadingVault ? (
                 <p className="text-xs text-app-muted">Đang kiểm tra cấu hình...</p>
-              ) : vault ? (
-                <p className="text-xs text-app-muted">{vault.name} đang hoạt động</p>
+              ) : activeVault ? (
+                <p className="text-xs text-app-muted">{activeVault.display_name || activeVault.name} đang hoạt động</p>
               ) : (
                 <p className="text-xs text-vibrant-orange">Chưa có Brand Vault để tạo nội dung.</p>
               )}
             </div>
           </div>
-          {!isLoadingVault && !vault ? (
-            <Button variant="ghost" size="sm" type="button" onClick={() => window.location.href = '/onboarding'}>
-              Thiết lập
-            </Button>
-          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {vaults.length > 0 ? (
+              <select
+                value={vaultId ?? ''}
+                onChange={(e) => setVaultId(e.target.value || null)}
+                className="rounded-badge border border-app-line bg-pure-canvas px-3 py-1.5 text-sm text-midnight-ink"
+              >
+                {vaults.map((vault) => (
+                  <option key={vault.id} value={vault.id}>
+                    {vault.display_name || vault.name}{vault.is_active ? ' (Active)' : ''}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <Link
+              href="/onboarding"
+              className="inline-flex items-center gap-2 rounded-button border border-app-line bg-pure-canvas px-3 py-2 text-sm font-medium leading-none text-midnight-ink transition hover:border-sky-blue/40 hover:bg-hint-of-blue/35"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Tạo vault mới
+            </Link>
+          </div>
         </div>
       </Card>
 
@@ -220,7 +247,7 @@ export function NewJobForm() {
           value={title}
           onChange={setTitle}
         />
-        <Button type="submit" size="lg" className="w-full" disabled={channels.length === 0 || loading || !vault}>
+        <Button type="submit" size="lg" className="w-full" disabled={channels.length === 0 || loading || !vaultId}>
           {loading ? 'Đang gửi...' : (
             <>
               <Link2 className="h-4 w-4" /> Tạo bản nháp

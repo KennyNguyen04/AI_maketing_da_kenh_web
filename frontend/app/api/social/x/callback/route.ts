@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptToken } from '@/lib/social/crypto'
+import { isOAuthStateValid, timingSafeEqualString } from '@/lib/social/oauth'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -11,8 +12,13 @@ export async function GET(request: NextRequest) {
   const expectedState = cookieStore.get('amplify_x_oauth_state')?.value
   const verifier = cookieStore.get('amplify_x_code_verifier')?.value
 
-  if (!code || !state || !expectedState || state !== expectedState || !verifier) {
+  if (!code || !state || !expectedState || !verifier) {
     return NextResponse.redirect(new URL('/settings?social=x&status=failed', request.url))
+  }
+
+  // Single combined check: timing-safe equality + expiration
+  if (!timingSafeEqualString(state, expectedState) || !isOAuthStateValid(state)) {
+    return NextResponse.redirect(new URL('/settings?social=x&status=expired', request.url))
   }
 
   const supabase = await createClient()
@@ -74,7 +80,7 @@ export async function GET(request: NextRequest) {
     : null
 
   await supabase
-    .from('social_accounts')
+    .from('social_targets')
     .upsert({
       user_id: user.id,
       provider: 'x',

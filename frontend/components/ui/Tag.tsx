@@ -5,7 +5,7 @@ import { clsx } from 'clsx'
 
 export interface TagProps {
   label: string
-  color?: 'blue' | 'green' | 'orange' | 'pink'
+  color?: 'blue' | 'green' | 'orange' | 'pink' | 'purple' | 'red'
   editable?: boolean
   onRemove?: () => void
   className?: string
@@ -17,6 +17,8 @@ export function Tag({ label, color = 'blue', editable, onRemove, className }: Ta
     green: 'border-forest-fern/20 bg-forest-fern/10 text-deep-moss',
     orange: 'border-sunset-orange/25 bg-sunset-orange/10 text-vibrant-orange',
     pink: 'border-blush-pink/30 bg-blush-pink/10 text-midnight-ink',
+    purple: 'border-blush-pink/30 bg-blush-pink/10 text-midnight-ink',
+    red: 'border-sunset-orange/40 bg-sunset-orange/20 text-sunset-orange',
   }
 
   return (

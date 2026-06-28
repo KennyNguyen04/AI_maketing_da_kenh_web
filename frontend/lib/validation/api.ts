@@ -16,6 +16,11 @@ export function assertUuid(value: unknown, field: string) {
   return value
 }
 
+export function assertUuidOrEmpty(value: unknown, field: string): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined
+  return assertUuid(value, field)
+}
+
 export class ApiValidationError extends Error {
   status: number
 

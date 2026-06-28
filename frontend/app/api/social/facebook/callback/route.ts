@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptToken } from '@/lib/social/crypto'
+import { isOAuthStateValid, timingSafeEqualString } from '@/lib/social/oauth'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -10,8 +11,13 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies()
   const expectedState = cookieStore.get('amplify_facebook_oauth_state')?.value
 
-  if (!code || !state || !expectedState || state !== expectedState) {
+  if (!code || !state || !expectedState) {
     return NextResponse.redirect(new URL('/settings?social=facebook&status=failed', request.url))
+  }
+
+  // Use timing-safe comparison to prevent timing side-channels, then check expiration.
+  if (!isOAuthStateValid(state) || !timingSafeEqualString(state, expectedState)) {
+    return NextResponse.redirect(new URL('/settings?social=facebook&status=expired', request.url))
   }
 
   const supabase = await createClient()
@@ -71,7 +77,7 @@ export async function GET(request: NextRequest) {
 
   if (pageRows.length > 0) {
     await supabase
-      .from('social_accounts')
+      .from('social_targets')
       .upsert(pageRows, { onConflict: 'user_id,provider,external_account_id' })
   }
 

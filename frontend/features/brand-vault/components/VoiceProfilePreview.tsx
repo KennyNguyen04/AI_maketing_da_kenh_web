@@ -44,7 +44,17 @@ function EditableTags({ label, color, initial, onChange }: { label: string; colo
   )
 }
 
-export function VoiceProfilePreview({ profile, onChange }: { profile: VoiceProfile; onChange: (profile: VoiceProfile) => void }) {
+export function VoiceProfilePreview({
+  profile,
+  onChange,
+  systemPrompt,
+  onSystemPromptChange,
+}: {
+  profile: VoiceProfile
+  onChange: (profile: VoiceProfile) => void
+  systemPrompt?: string
+  onSystemPromptChange?: (prompt: string) => void
+}) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -55,8 +65,8 @@ export function VoiceProfilePreview({ profile, onChange }: { profile: VoiceProfi
       <EditableTags label="Nên tránh / Avoid" color="orange" initial={profile.avoid} onChange={(next) => onChange({ ...profile, avoid: next })} />
       <section>
         <p className="mb-3 text-sm font-medium text-dark-charcoal">Độ dài câu / Sentence style</p>
-        <select 
-          className="rounded-badge border border-light-gray bg-pure-canvas px-4 py-2 text-sm text-midnight-ink" 
+        <select
+          className="rounded-badge border border-light-gray bg-pure-canvas px-4 py-2 text-sm text-midnight-ink"
           value={profile.sentence_style}
           onChange={(e) => onChange({ ...profile, sentence_style: e.target.value })}
         >
@@ -66,21 +76,21 @@ export function VoiceProfilePreview({ profile, onChange }: { profile: VoiceProfi
           <option value="varied">varied</option>
         </select>
       </section>
-      <Card variant="sand" className="p-6">
-        <button type="button" onClick={() => setExpanded(!expanded)} className="flex w-full items-center justify-between text-left text-sm font-medium text-midnight-ink">
+      <Card variant="sand" className="space-y-3 p-6">
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="flex w-full items-center justify-between text-left text-sm font-medium text-midnight-ink"
+        >
           System Prompt được tạo từ Brand Vault của bạn
           <ChevronDown className={expanded ? 'h-4 w-4 rotate-180 transition' : 'h-4 w-4 transition'} />
         </button>
-        {expanded ? (
-          <pre className="mt-4 whitespace-pre-wrap rounded-card bg-pure-canvas p-4 font-mono text-sm leading-6 text-dark-charcoal">
-{`Bạn là trợ lý viết nội dung marketing có phong cách viết cụ thể.
-GIỌNG VĂN: ${profile.tone.join(', ')}
-ĐỘ DÀI CÂU: Ngắn (~${profile.avg_sentence_length} từ/câu)
-CỤM TỪ HAY DÙNG: ${profile.signature_phrases.join(', ')}
-CHỦ ĐỀ: ${profile.topics.join(', ')}
-TRÁNH: ${profile.avoid.join(', ')}`}
-          </pre>
-        ) : null}
+        <textarea
+          value={systemPrompt ?? ''}
+          onChange={(event) => onSystemPromptChange?.(event.target.value)}
+          rows={10}
+          className="w-full whitespace-pre-wrap rounded-card border border-app-line bg-pure-canvas p-4 font-mono text-sm leading-6 text-dark-charcoal"
+        />
       </Card>
     </div>
   )

@@ -3,8 +3,11 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypt
 const ALGORITHM = 'aes-256-gcm'
 
 function getKey() {
-  const raw = process.env.TOKEN_ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'amplify-dev-token-key'
-  return createHash('sha256').update(raw).digest()
+  const key = process.env.TOKEN_ENCRYPTION_KEY
+  if (!key) {
+    throw new Error('TOKEN_ENCRYPTION_KEY environment variable is required')
+  }
+  return createHash('sha256').update(key).digest()
 }
 
 export function encryptToken(value: string) {

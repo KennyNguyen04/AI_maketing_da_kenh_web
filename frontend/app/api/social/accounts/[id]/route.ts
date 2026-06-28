@@ -18,7 +18,7 @@ export async function DELETE(
     const id = assertUuid(rawId, 'account_id')
 
     const { error } = await supabase
-      .from('social_accounts')
+      .from('social_targets')
       .delete()
       .eq('id', id)
       .eq('user_id', user.id)

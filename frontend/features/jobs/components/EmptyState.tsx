@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { FileText, Fingerprint, Sparkles } from 'lucide-react'
+import { FileText, Fingerprint, Plus, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
@@ -19,7 +19,9 @@ export function EmptyState() {
         <Sparkles className="h-6 w-6" />
       </div>
       <h2 className="mt-4 text-lg text-midnight-ink">Chưa có nội dung nào</h2>
-      <p className="mt-2 text-sm text-app-muted">Bắt đầu bằng một bài viết gốc, Amplify sẽ tạo bản nháp cho từng kênh.</p>
+      <p className="mt-2 text-sm text-app-muted">
+        Bắt đầu bằng một bài viết gốc, Amplify sẽ tạo bản nháp cho từng kênh.
+      </p>
 
       <div className="mx-auto mt-6 grid max-w-3xl gap-3 text-left md:grid-cols-3">
         {steps.map((item) => {
@@ -35,6 +37,7 @@ export function EmptyState() {
       </div>
 
       <Button className="mt-6" onClick={() => router.push('/dashboard/new')}>
+        <Plus className="mr-2 h-4 w-4" />
         Tạo nội dung đầu tiên
       </Button>
     </Card>

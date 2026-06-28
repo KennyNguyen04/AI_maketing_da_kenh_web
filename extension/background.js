@@ -8,7 +8,7 @@ const PROCESSING_KEY = 'amplifyProcessing';
 const GRACE_PERIOD_MS = 10_000; // 10s grace period before marking tab-close as failure
 
 async function getApiBase() {
-  const d = await chrome.storage.session.get('api_base');
+  const d = await chrome.storage.local.get('api_base');
   return d.api_base || 'http://localhost:3000';
 }
 
@@ -110,8 +110,8 @@ async function pollAndProcessTask() {
   if (stored[PROCESSING_KEY]) return; // Task in progress
 
   try {
-    const sessionData = await chrome.storage.session.get(['api_token']);
-    if (!sessionData.api_token) return;
+    const localData = await chrome.storage.local.get(['api_token']);
+    if (!localData.api_token) return;
 
     const apiBase = await getApiBase();
     const response = await fetch(`${apiBase}/api/extension/tasks`, {
@@ -239,8 +239,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // ─── Update task status on backend ───
 async function updateTaskStatus(taskId, status, resultUrl, actorUrl, actorName, targetName, errorMsg) {
   try {
-    const sessionData = await chrome.storage.session.get(['api_token']);
-    if (!sessionData.api_token) return;
+    const localData = await chrome.storage.local.get(['api_token']);
+    if (!localData.api_token) return;
 
     const apiBase = await getApiBase();
     const body = { status, task_id: taskId };
