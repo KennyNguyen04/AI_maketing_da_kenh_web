@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { verifyToken } from '../_auth'
 
 export async function POST(request: Request) {
@@ -7,8 +7,7 @@ export async function POST(request: Request) {
     const userId = await verifyToken(request.headers.get('Authorization'))
     if (!userId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
-    const supabase = await createClient()
-    await supabase.auth.admin.updateUserById(userId, {
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
       user_metadata: { extension_registered: true, extension_registered_at: new Date().toISOString() }
     })
 
@@ -24,8 +23,7 @@ export async function DELETE(request: Request) {
     const userId = await verifyToken(request.headers.get('Authorization'))
     if (!userId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
-    const supabase = await createClient()
-    await supabase.auth.admin.updateUserById(userId, {
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
       user_metadata: { extension_registered: false }
     })
 

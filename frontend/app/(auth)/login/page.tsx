@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { createClient } from '@/lib/supabase/client'
 import { Toast } from '@/components/ui/Toast'
+import { checkRateLimit, recordFailedAttempt, recordSuccessfulAttempt, formatRetryAfter } from '@/lib/security/rate-limit'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,15 +23,27 @@ export default function LoginPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError('')
+
+    const rateLimit = checkRateLimit('login', email)
+    if (!rateLimit.allowed) {
+      setError(`Quá nhiều lần thử. Vui lòng đợi ${formatRetryAfter(rateLimit.retryAfterMs)} rồi thử lại. / Too many attempts. Please wait ${formatRetryAfter(rateLimit.retryAfterMs)} before trying again.`)
+      return
+    }
+
     setLoading(true)
 
     const supabase = createClient()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError(error.message === 'Invalid login credentials'
-        ? 'Email hoặc mật khẩu không đúng / Invalid credentials'
-        : error.message)
+      const updated = recordFailedAttempt('login', email)
+      if (!updated.allowed) {
+        setError(`Quá nhiều lần thử sai. Tài khoản tạm khóa ${formatRetryAfter(updated.retryAfterMs)}. / Too many failed attempts. Account temporarily locked for ${formatRetryAfter(updated.retryAfterMs)}.`)
+      } else {
+        setError(error.message === 'Invalid login credentials'
+          ? `Email hoặc mật khẩu không đúng / Invalid credentials. Còn ${updated.remaining} lần thử.`
+          : error.message)
+      }
       setLoading(false)
       return
     }
@@ -40,6 +53,8 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
+
+    recordSuccessfulAttempt('login', email)
 
     // Hard navigation to ensure auth cookies are set before middleware runs
     window.location.href = '/dashboard'

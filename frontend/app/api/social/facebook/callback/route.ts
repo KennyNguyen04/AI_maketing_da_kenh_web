@@ -1,8 +1,13 @@
 import { cookies } from 'next/headers'
+import { createHmac } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptToken } from '@/lib/social/crypto'
 import { isOAuthStateValid, timingSafeEqualString } from '@/lib/social/oauth'
+
+// NOTE: Facebook OAuth 2.0 does not support PKCE. We protect server-side
+// Graph API calls with `appsecret_proof` (HMAC-SHA256 of access_token keyed
+// by app_secret), which Facebook requires for production apps.
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -47,7 +52,15 @@ export async function GET(request: NextRequest) {
   }
 
   const tokenData = await tokenResponse.json() as { access_token: string; expires_in?: number }
-  const pagesResponse = await fetch(`https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,tasks&access_token=${encodeURIComponent(tokenData.access_token)}`)
+
+  // appsecret_proof = HMAC-SHA256(app_secret, access_token) — required by Facebook
+  // for every Graph API call from a server-side confidential client.
+  // Plain SHA-256(concat) is NOT the same as HMAC-SHA256(key, data); use createHmac.
+  const appsecretProof = createHmac('sha256', appSecret).update(tokenData.access_token).digest('hex')
+
+  const pagesResponse = await fetch(
+    `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,tasks&access_token=${encodeURIComponent(tokenData.access_token)}&appsecret_proof=${appsecretProof}`
+  )
 
   if (!pagesResponse.ok) {
     return NextResponse.redirect(new URL('/settings?social=facebook&status=pages_failed', request.url))
@@ -81,7 +94,7 @@ export async function GET(request: NextRequest) {
       .upsert(pageRows, { onConflict: 'user_id,provider,external_account_id' })
   }
 
-  cookieStore.delete('amplify_facebook_oauth_state')
+  await cookieStore.delete('amplify_facebook_oauth_state')
 
   const status = pageRows.length > 0 ? 'connected' : 'no_pages'
   return NextResponse.redirect(new URL(`/settings?social=facebook&status=${status}`, request.url))

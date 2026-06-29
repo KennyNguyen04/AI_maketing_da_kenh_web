@@ -8,7 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components features lib middleware.ts next.config.ts --no-cache",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@google/genai": "^2.3.0",
@@ -38,6 +41,8 @@
     "eslint-config-next": "15.5.18",
     "puppeteer": "^25.1.0",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9",
+    "@vitest/coverage-v8": "^2.1.9"
   }
 }

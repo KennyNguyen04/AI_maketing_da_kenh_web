@@ -14,6 +14,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatVietnameseDate(value: string) {
   const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
   return `${date.getDate()} tháng ${date.getMonth() + 1}, ${date.getFullYear()}`
 }
 
@@ -23,6 +24,7 @@ export function formatVietnameseDate(value: string) {
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date()
   const then = new Date(date)
+  if (Number.isNaN(then.getTime())) return 'vừa xong'
   const diffMs = now.getTime() - then.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMins / 60)
@@ -32,7 +34,7 @@ export function formatRelativeTime(date: string | Date): string {
   if (diffMins < 60) return `${diffMins} phút trước`
   if (diffHours < 24) return `${diffHours} giờ trước`
   if (diffDays < 7) return `${diffDays} ngày trước`
-  return formatVietnameseDate(date.toString())
+  return formatVietnameseDate(date.toString()) ?? `${diffDays} ngày trước`
 }
 
 /**

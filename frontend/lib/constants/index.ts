@@ -5,6 +5,7 @@ export const CHANNEL_LIMITS: Record<Channel, number | null> = {
   linkedin_thread: 3000,
   facebook: 63206,
   twitter: 280,
+  x: 280,
 }
 
 export const CHANNEL_LABELS: Record<Channel, string> = {
@@ -12,6 +13,7 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
   linkedin_thread: 'LinkedIn Thread',
   facebook: 'Facebook',
   twitter: 'X / Twitter',
+  x: 'X / Twitter',
 }
 
 export const STATUS_LABELS: Record<JobStatus, { vi: string; en: string }> = {

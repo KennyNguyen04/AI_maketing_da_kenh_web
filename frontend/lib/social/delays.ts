@@ -34,15 +34,20 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+const DEFAULT_MIN_GAP_MINUTES = 30
+
 /**
- * Check if delay is needed based on last post time
+ * Check if delay is needed based on last post time.
+ *
+ * NOTE: This module runs in the browser context (used by extension), so it
+ * cannot read server-side env vars. Callers should pass `minGapMinutes`
+ * explicitly if they need a non-default value. The default gap is 30 minutes.
  */
-export function needsDelay(lastPostAt: Date | null, minGapMinutes = 30): boolean {
+export function needsDelay(lastPostAt: Date | null, minGapMinutes?: number): boolean {
   if (!lastPostAt) return false
-
+  const gap = minGapMinutes ?? DEFAULT_MIN_GAP_MINUTES
   const gapMs = Date.now() - lastPostAt.getTime()
-  const minGapMs = minGapMinutes * 60 * 1000
-
+  const minGapMs = gap * 60 * 1000
   return gapMs < minGapMs
 }
 

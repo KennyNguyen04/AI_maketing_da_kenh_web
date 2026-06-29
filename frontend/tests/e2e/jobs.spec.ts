@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '../setup/test-setup'
 import { loginUser, shouldSkipAuthTests } from '../setup/page-helpers'
 
 test.describe('Content Jobs', () => {

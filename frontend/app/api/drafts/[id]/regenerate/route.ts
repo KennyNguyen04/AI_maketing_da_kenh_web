@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { repurposeContentAI } from '@/lib/ai'
+import { AiTimeoutError } from '@/lib/ai/client'
 import { assertUuid, validationErrorResponse } from '@/lib/validation/api'
 
 export async function POST(
@@ -54,7 +55,7 @@ export async function POST(
       return NextResponse.json({ error: 'Brand vault not found' }, { status: 404 })
     }
 
-    // 4. Generate new content
+    // 4. Generate new content (wrapped with timeout in lib/ai/client.ts)
     const newContent = await repurposeContentAI(vault.system_prompt, job.source_content, oldDraft.channel)
 
     // 5. Insert new draft first (safer — old draft stays intact if insert fails)
@@ -87,6 +88,12 @@ export async function POST(
   } catch (error: unknown) {
     const validationResponse = validationErrorResponse(error)
     if (validationResponse) return validationResponse
+    if (error instanceof AiTimeoutError) {
+      return NextResponse.json(
+        { error: 'AI generation timed out. Please try again.', code: 'AI_TIMEOUT' },
+        { status: 504 },
+      )
+    }
     console.error('POST /api/drafts/[id]/regenerate error:', error)
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 })
   }

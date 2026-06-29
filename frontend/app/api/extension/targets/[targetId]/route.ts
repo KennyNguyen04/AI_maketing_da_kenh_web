@@ -1,35 +1,29 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { verifyToken } from '../../_auth'
 
 /**
  * GET /api/extension/targets/[targetId]
  * Get a specific target
+ *
+ * Auth: Bearer API token (verified via api_keys table hash).
+ * Uses service-role client because Bearer-token requests have no Supabase session.
  */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ targetId: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.slice(7)
-    const supabase = await createClient()
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const userId = await verifyToken(request.headers.get('Authorization'))
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { targetId } = await params
 
-    const { data: target, error } = await supabase
+    const { data: target, error } = await supabaseAdmin
       .from('social_targets')
       .select('*')
       .eq('id', targetId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (error || !target) {
@@ -52,18 +46,8 @@ export async function PATCH(
   { params }: { params: Promise<{ targetId: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.slice(7)
-    const supabase = await createClient()
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const userId = await verifyToken(request.headers.get('Authorization'))
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { targetId } = await params
     const body = await request.json()
@@ -82,11 +66,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
 
-    const { data: target, error: updateError } = await supabase
+    const { data: target, error: updateError } = await supabaseAdmin
       .from('social_targets')
       .update(updateData)
       .eq('id', targetId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .select('*')
       .single()
 
@@ -110,26 +94,16 @@ export async function DELETE(
   { params }: { params: Promise<{ targetId: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.slice(7)
-    const supabase = await createClient()
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const userId = await verifyToken(request.headers.get('Authorization'))
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { targetId } = await params
 
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseAdmin
       .from('social_targets')
       .delete()
       .eq('id', targetId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (deleteError) {
       return NextResponse.json({ error: 'Failed to delete target' }, { status: 500 })

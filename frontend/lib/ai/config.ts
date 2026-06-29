@@ -47,15 +47,7 @@ export const AI_GENERATION_CONFIG: Record<string, GenerationConfig> = {
     topK: 40,
   },
 
-  // Twitter - concise, witty, controlled randomness
-  twitter: {
-    temperature: 0.6,
-    maxTokens: 500,
-    topP: 0.9,
-    topK: 20,
-  },
-
-  // X (same as twitter) - explicit X branding
+  // X (Twitter) - concise, witty, controlled randomness
   x: {
     temperature: 0.6,
     maxTokens: 500,

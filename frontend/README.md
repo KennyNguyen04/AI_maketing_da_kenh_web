@@ -62,8 +62,10 @@ Optional (per-feature):
 | `npm run start` | Run production build |
 | `npm run typecheck` | TypeScript check |
 | `npm run lint` | ESLint |
-| `npm run test` | Vitest unit tests |
-| `npm run test:e2e` | Playwright E2E tests |
+| `npm run test` | Vitest unit tests (single run) |
+| `npm run test:watch` | Vitest watch mode |
+| `npm run test:coverage` | Vitest with V8 coverage report |
+| `npm run test:e2e` | Playwright E2E tests — use `npx playwright test` (requires local Supabase + Inngest dev) |
 
 ## Folder Structure
 
@@ -111,3 +113,48 @@ curl http://localhost:3000/api/health
 ```
 
 Returns DB connectivity, schema access, env validation status.
+
+## Testing
+
+### Unit tests (Vitest)
+
+```bash
+npm run test                  # single run
+npm run test:watch            # watch mode
+npm run test:coverage         # with V8 coverage
+```
+
+345 unit tests across 15 files. Coverage is 100% for the security-critical
+modules (`lib/auth`, `lib/social/crypto`, `lib/validation/api`,
+`lib/security/*`) and ~40% overall across `lib/`.
+
+### E2E tests (Playwright)
+
+```bash
+npx playwright install        # one-time browser install
+npm run test:e2e              # run all 43 tests
+```
+
+E2E tests use a `mockAllExternalApis` helper so they do **not** require
+live X or Facebook credentials. They do require a local Supabase instance
+and Inngest dev server to be running. See `tests/MANUAL_TESTING.md` for
+the full 89-item manual sweep required before production launch.
+
+### Test status (v0.1.0)
+
+| Suite | Result |
+|---|---|
+| Vitest unit | 345/345 pass |
+| Vitest coverage (lib/) | 9 files at 100%, overall 39.59% |
+| Playwright E2E | 43 tests, no crashes |
+| Production build | ~11s |
+
+## Environment
+
+See `.env.example` for the full list. The most important vars:
+
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — public client
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only, never expose to client
+- `TOKEN_ENCRYPTION_KEY` — 32+ chars, encrypts OAuth tokens at rest
+- `GOOGLE_AI_API_KEY` — Gemini API key
+- `X_CLIENT_ID/SECRET` / `FACEBOOK_APP_ID/SECRET` — OAuth (optional, only needed for publishing)

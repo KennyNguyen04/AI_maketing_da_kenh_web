@@ -8,7 +8,28 @@ export function createOAuthState() {
   return `${timestamp.toString(36)}:${nonce}`
 }
 
-export function isOAuthStateValid(state: string): boolean {
+/**
+ * Constant-time string comparison to prevent timing side-channel attacks.
+ * Always iterates over max(a.length, b.length) to avoid leaking length.
+ */
+export function timingSafeEqualString(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length)
+  let diff = a.length ^ b.length // length mismatch contributes to diff
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0)
+  }
+  return diff === 0
+}
+
+/**
+ * Validates an OAuth state string received from the provider.
+ * If `expectedState` is provided, compares it in constant time before
+ * checking expiry.
+ */
+export function isOAuthStateValid(state: string, expectedState?: string): boolean {
+  if (expectedState !== undefined && !timingSafeEqualString(state, expectedState)) {
+    return false
+  }
   const parts = state.split(':')
   if (parts.length !== 2) return false
   const timestamp = parseInt(parts[0], 36)
@@ -28,15 +49,4 @@ export function addQueryParams(baseUrl: string, params: Record<string, string>) 
   const url = new URL(baseUrl)
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value))
   return url.toString()
-}
-
-/**
- * Constant-time string comparison to prevent timing side-channel attacks.
- * Returns false on length mismatch instead of leaking length through timing.
- */
-export function timingSafeEqualString(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  return diff === 0
 }

@@ -1,6 +1,11 @@
 import type { Channel, SourceType } from '@/lib/types'
 
-export const VALID_CHANNELS: Channel[] = ['linkedin_post', 'linkedin_thread', 'facebook', 'twitter']
+// Canonical channels: 'linkedin_post'/'linkedin_thread'/'facebook'/'x'
+// 'twitter' is accepted as an alias for 'x' (deprecated). Validation normalises it.
+export const VALID_CHANNELS: Channel[] = ['linkedin_post', 'linkedin_thread', 'facebook', 'x']
+export const DEPRECATED_CHANNEL_ALIASES: Record<string, Channel> = {
+  twitter: 'x',
+}
 export const VALID_SOURCE_TYPES: SourceType[] = ['url', 'text', 'form']
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -35,17 +40,42 @@ export function wordCount(value: string) {
   return value.trim().split(/\s+/).filter(Boolean).length
 }
 
+/**
+ * Normalise channel aliases (e.g. 'twitter' -> 'x') so downstream code only ever
+ * sees canonical channel names.
+ */
+export function normaliseChannel(value: unknown): Channel | null {
+  if (typeof value !== 'string') return null
+  const lower = value.trim().toLowerCase()
+  if (VALID_CHANNELS.includes(lower as Channel)) return lower as Channel
+  if (DEPRECATED_CHANNEL_ALIASES[lower]) return DEPRECATED_CHANNEL_ALIASES[lower]
+  return null
+}
+
 export function validateChannels(value: unknown) {
   if (!Array.isArray(value) || value.length === 0) {
     throw new ApiValidationError('Please select at least one channel')
   }
 
-  const channels = [...new Set(value)]
-  if (!channels.every((channel) => VALID_CHANNELS.includes(channel as Channel))) {
-    throw new ApiValidationError('One or more channels are invalid')
+  // Dedupe input first (case-sensitive), then normalise each to canonical form,
+  // then dedupe again to catch aliases like 'twitter' + 'x' that collapse to the
+  // same canonical channel.
+  const uniqueInput = [...new Set(value.map((c) => String(c)))]
+  const normalised: Channel[] = []
+  for (const raw of uniqueInput) {
+    const canonical = normaliseChannel(raw)
+    if (!canonical) {
+      throw new ApiValidationError(`Channel "${raw}" is invalid`)
+    }
+    if (normalised.includes(canonical)) {
+      throw new ApiValidationError(
+        `Duplicate channel "${raw}" (resolves to "${canonical}")`,
+      )
+    }
+    normalised.push(canonical)
   }
 
-  return channels as Channel[]
+  return normalised as Channel[]
 }
 
 export function validateSourceType(value: unknown) {

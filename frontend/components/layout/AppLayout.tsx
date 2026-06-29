@@ -1,9 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 
 export async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Defense-in-depth: middleware should already redirect, but this guards against
+  // direct server-side renders if middleware ever misfires.
+  if (!user) {
+    redirect('/login')
+  }
 
   const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
   const initials = fullName.substring(0, 2).toUpperCase()
