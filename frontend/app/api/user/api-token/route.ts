@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { hashToken, getKeyPrefix } from '../../extension/_auth'
+import { encryptToken } from '@/lib/crypto/token-cipher'
 
 /**
  * POST /api/user/api-token
- * Generate new API token
+ * Generate new API token (rotates: deletes old, inserts new).
+ * Returns plaintext token — caller MUST store it now (only shown once
+ * server-side; encrypted copy persisted for later "show again" UX).
  */
 export async function POST() {
   try {
@@ -15,30 +19,49 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Generate new token
     const newToken = `amp_${crypto.randomUUID().replace(/-/g, '')}${Date.now().toString(36)}`
     const tokenHash = hashToken(newToken)
     const keyPrefix = getKeyPrefix(newToken)
+    let encrypted: string
+    try {
+      encrypted = encryptToken(newToken)
+    } catch (e) {
+      console.error('Encryption failed (missing TOKEN_ENCRYPTION_KEY?):', e)
+      return NextResponse.json(
+        { error: 'Server encryption key not configured' },
+        { status: 500 }
+      )
+    }
 
-    // Save to api_keys table
-    const { error } = await supabase.from('api_keys').insert({
-      user_id: user.id,
-      name: 'Chrome Extension',
-      key_hash: tokenHash,
-      key_prefix: keyPrefix
-    })
+    const { error: deleteError } = await supabaseAdmin
+      .from('api_keys')
+      .delete()
+      .eq('user_id', user.id)
 
-    if (error) {
-      console.error('Failed to save token:', error)
+    if (deleteError) {
+      console.error('Failed to delete old tokens:', deleteError)
+    }
+
+    const { error: insertError } = await supabaseAdmin
+      .from('api_keys')
+      .insert({
+        user_id: user.id,
+        name: 'Chrome Extension',
+        key_hash: tokenHash,
+        key_prefix: keyPrefix,
+        encrypted_token: encrypted
+      })
+
+    if (insertError) {
+      console.error('Failed to save token:', insertError)
       return NextResponse.json({ error: 'Failed to generate token' }, { status: 500 })
     }
 
-    // Update user metadata
     await supabase.auth.updateUser({
       data: { has_api_token: true, api_token_created_at: new Date().toISOString() }
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       token: newToken,
       message: 'Token generated successfully'
     })
@@ -50,7 +73,7 @@ export async function POST() {
 
 /**
  * GET /api/user/api-token
- * Get current API token info (no secrets)
+ * Get current API token info (no secrets). Use /me for the plaintext.
  */
 export async function GET() {
   try {
