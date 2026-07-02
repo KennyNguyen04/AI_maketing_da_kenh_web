@@ -2,13 +2,12 @@ import { GoogleGenAI } from '@google/genai'
 import type { GenerationConfig } from './config'
 import { logEvent } from '@/lib/observability/logger'
 
-// Use gemini-2.5-flash-lite — cheapest Gemini model on free tier.
+// Use gemini-2.5-flash — better quality than flash-lite for marketing copy.
 // Free tier limits (Google AI Studio):
-//   - gemini-2.5-flash-lite: 30 req/min, 1500 req/day → ~3x headroom vs Flash
 //   - gemini-2.5-flash:     15 req/min, 1500 req/day
-// Flash-Lite keeps quality acceptable for marketing copy while maximizing headroom
-// for 50+ concurrent MVP users.
-export const MODEL_NAME = 'gemini-2.5-flash-lite'
+//   - gemini-2.5-flash-lite: 30 req/min, 1500 req/day → ~2x headroom vs Flash
+// Chosen for better output quality on voice analysis & content repurposing.
+export const MODEL_NAME = 'gemini-2.5-flash'
 
 // Per-attempt timeout: Google GenAI SDK hangs indefinitely otherwise.
 // 30s covers normal Gemini 2.5 Flash-Lite latency (p95 ~8-12s) plus buffer.
