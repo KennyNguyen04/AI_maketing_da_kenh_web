@@ -12,6 +12,7 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "http://localhost:3001/*",
+    "https://amplify-eight-drab.vercel.app/*",
     "https://www.facebook.com/*",
     "https://www.instagram.com/*",
     "https://x.com/*",

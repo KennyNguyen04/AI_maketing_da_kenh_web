@@ -17,6 +17,7 @@ export default function OnboardingPage() {
   const [flow, setFlow] = useState<OnboardingFlow>('content')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [forceRefresh, setForceRefresh] = useState(false)
   const supabase = createClient()
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollAttemptsRef = useRef(0)
@@ -39,7 +40,9 @@ export default function OnboardingPage() {
 
     try {
       const endpoint = mode === 'url' ? '/api/brand-vault/analyze-url' : '/api/brand-vault/analyze-text'
-      const payload = mode === 'url' ? { url: value } : { text: value }
+      const payload = mode === 'url'
+        ? { url: value, forceRefresh }
+        : { text: value, forceRefresh }
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -107,7 +110,7 @@ export default function OnboardingPage() {
       const res = await fetch('/api/brand-vault/from-form', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, forceRefresh })
       })
 
       if (!res.ok) {
@@ -150,6 +153,15 @@ export default function OnboardingPage() {
           <h1 className="whitespace-pre-line text-[48px] leading-none text-midnight-ink">Hãy cho AI biết{'\n'}bạn viết như thế nào.</h1>
           <p className="mt-5 text-dark-charcoal">Brand Vault là bộ nhớ giọng văn vĩnh cửu của bạn. Chỉ cần thiết lập 1 lần.</p>
           {error && <div className="mt-4 rounded-md bg-vibrant-orange/10 p-3 text-sm text-vibrant-orange">{error}</div>}
+          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-app-muted">
+            <input
+              type="checkbox"
+              checked={forceRefresh}
+              onChange={(e) => setForceRefresh(e.target.checked)}
+              className="h-4 w-4 rounded border-app-muted text-primary focus:ring-primary"
+            />
+            Phân tích lại (bỏ qua cache)
+          </label>
           <div className="mt-10">
             <FlowSelector value={flow} onChange={setFlow} />
             {flow === 'content' ? <BrandVaultSetupText onSubmit={handleTextSubmit} /> : <BrandVaultSetupForm onSubmit={handleFormSubmit} />}

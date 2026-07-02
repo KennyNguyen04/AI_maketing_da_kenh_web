@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       apiBase,
       apiBase.replace(':3001', ':3000'),
       apiBase.replace(':3000', ':3001'),
+      'https://amplify-eight-drab.vercel.app',
       'http://localhost:3001',
       'http://localhost:3000',
     ];
