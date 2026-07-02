@@ -11,7 +11,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { text } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const { text } = body
+    const { forceRefresh } = body
 
     if (!text || text.trim().length < 50) {
       return NextResponse.json({ error: 'Text must be at least 50 characters' }, { status: 400 })
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
         text,
         userId: user.id,
         vaultId: vault.id,
+        forceRefresh: !!forceRefresh,
       }
     })
 

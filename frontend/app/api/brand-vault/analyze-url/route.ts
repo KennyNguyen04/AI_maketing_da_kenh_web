@@ -11,7 +11,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { url } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const { url } = body
+    const { forceRefresh } = body
 
     if (!url || !url.startsWith('http')) {
       return NextResponse.json({ error: 'Valid URL is required' }, { status: 400 })
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
         url,
         userId: user.id,
         vaultId: vault.id,
+        forceRefresh: !!forceRefresh,
       }
     })
 

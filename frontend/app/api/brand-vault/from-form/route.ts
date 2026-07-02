@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeVoiceFromForm } from '@/lib/ai'
+import { getCachedProfile, saveToCache } from '@/lib/voice-cache'
 
 export async function POST(request: Request) {
   try {
@@ -11,21 +12,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { topics, tone, audience, style, samples } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const { topics, tone, audience, style, samples, forceRefresh } = body
 
     // Basic validation
     if (!topics || !tone || !audience || !style) {
       return NextResponse.json({ error: 'Missing required form fields' }, { status: 400 })
     }
 
-    // Call Gemini directly to analyze the answers and generate a voice profile JSON
-    const voiceProfile = await analyzeVoiceFromForm({
-      topics,
-      tone,
-      audience,
-      style,
-      samples,
-    })
+    const formKey = JSON.stringify({ topics, tone, audience, style, samples: samples || '' })
+    let voiceProfile: any
+
+    if (!forceRefresh) {
+      const cached = await getCachedProfile(user.id, formKey, 'form')
+      if (cached) {
+        console.log('[cache hit] form vault for user', user.id)
+        voiceProfile = cached
+      }
+    }
+
+    if (!voiceProfile) {
+      console.log('[cache miss] form vault for user', user.id)
+      voiceProfile = await analyzeVoiceFromForm({ topics, tone, audience, style, samples })
+      await saveToCache(user.id, formKey, 'form', voiceProfile)
+    }
 
     // Construct raw_input string for historical reference
     const rawInput = `Chủ đề: ${topics}\nGiọng văn: ${tone}\nĐộc giả: ${audience}\nVăn phong: ${style}\nMẫu câu: ${samples || 'Không có'}`

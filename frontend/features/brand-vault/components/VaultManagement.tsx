@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Edit2, MoreVertical, Trash2, X } from 'lucide-react'
+import { Check, Edit2, MoreVertical, Trash2, X, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Vault {
@@ -24,7 +24,51 @@ export function VaultManagement({ initialVaults }: VaultManagementProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [reanalyzingId, setReanalyzingId] = useState<string | null>(null)
   const supabase = createClient()
+
+  async function handleReanalyze(vault: Vault) {
+    setMenuOpenId(null)
+    setReanalyzingId(vault.id)
+
+    try {
+      const payload: any = { forceRefresh: true }
+      if (vault.source_type === 'url') {
+        payload.url = vault.raw_input
+      } else if (vault.source_type === 'text') {
+        payload.text = vault.raw_input
+      } else {
+        setReanalyzingId(null)
+        return
+      }
+
+      const endpoint = vault.source_type === 'url'
+        ? '/api/brand-vault/analyze-url'
+        : '/api/brand-vault/analyze-text'
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to reanalyze')
+      }
+
+      setVaults((prev) =>
+        prev.map((v) =>
+          v.id === vault.id ? { ...v, is_active: false } : v
+        )
+      )
+    } catch (error) {
+      console.error('Reanalyze error:', error)
+      alert('Lỗi khi phân tích lại: ' + (error instanceof Error ? error.message : 'Unknown'))
+    } finally {
+      setReanalyzingId(null)
+    }
+  }
 
   async function handleDelete(vaultId: string) {
     if (!confirm('Bạn có chắc muốn xóa vault này? Hành động này không thể hoàn tác.')) {
@@ -173,7 +217,13 @@ export function VaultManagement({ initialVaults }: VaultManagementProps) {
             </div>
 
             <div className="ml-4 flex items-center gap-2">
-              {!vault.is_active && !isEditing && (
+              {reanalyzingId === vault.id && (
+                <div className="flex items-center gap-1.5 text-xs text-app-muted">
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  Đang phân tích...
+                </div>
+              )}
+              {!vault.is_active && !isEditing && !reanalyzingId && (
                 <button
                   onClick={() => handleSetActive(vault.id)}
                   className="rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-light-surface"
@@ -190,8 +240,20 @@ export function VaultManagement({ initialVaults }: VaultManagementProps) {
                   <MoreVertical className="h-4 w-4" />
                 </button>
 
-                {isMenuOpen && (
+                    {isMenuOpen && (
                   <div className="absolute right-0 z-10 mt-1 w-36 rounded-md border border-app-line bg-pure-canvas py-1 shadow-lg">
+                    <button
+                      onClick={() => handleReanalyze(vault)}
+                      disabled={reanalyzingId === vault.id}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-dark-charcoal hover:bg-light-surface disabled:opacity-50"
+                    >
+                      {reanalyzingId === vault.id ? (
+                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+                      Phân tích lại
+                    </button>
                     <button
                       onClick={() => handleEdit(vault)}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-dark-charcoal hover:bg-light-surface"
