@@ -142,7 +142,11 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
                 <span className={cn(
                   'inline-block w-1.5 h-1.5 rounded-full mr-1',
                   post.channel === 'twitter' && 'bg-blue-400',
+                  post.channel === 'x' && 'bg-sky-500',
                   post.channel === 'facebook' && 'bg-blue-600',
+                  post.channel === 'facebook-group' && 'bg-indigo-600',
+                  post.channel === 'threads' && 'bg-blue-400',
+                  post.channel === 'instagram' && 'bg-pink-500',
                   post.channel === 'linkedin_post' && 'bg-sky-600',
                   post.channel === 'linkedin_thread' && 'bg-sky-700'
                 )} />

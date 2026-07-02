@@ -117,7 +117,7 @@ async function pollAndProcessTask() {
     const response = await fetch(`${apiBase}/api/extension/tasks`, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionData.api_token}`
+        'Authorization': `Bearer ${localData.api_token}`
       }
     });
 
@@ -159,8 +159,17 @@ async function processTask(task) {
 
   const tab = await chrome.tabs.create({ url, active: true });
 
+  // Keep both keys in sync: PROCESSING_KEY for background, currentProcessingPost for automators
   await chrome.storage.local.set({
-    [PROCESSING_KEY]: { id: task.id, channel: task.channel, tabId: tab.id, retryCount: 0 }
+    [PROCESSING_KEY]: { id: task.id, channel: task.channel, tabId: tab.id, retryCount: 0 },
+    currentProcessingPost: {
+      id: task.id,
+      content: task.content,
+      channel: task.channel,
+      target_id: task.target_id,
+      target_type: task.target_type,
+      images: task.images || []
+    }
   });
 
   console.log(`[Amplify] Processing task ${task.id} on ${task.channel} in tab ${tab.id}`);
@@ -195,24 +204,14 @@ async function retryTask(taskId) {
 // ─── Message handler from automators ───
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'postCompleted') {
-    chrome.storage.local.remove(PROCESSING_KEY);
+    chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
     updateTaskStatus(message.postId, 'completed', message.resultUrl, message.actorUrl, message.actorName, message.targetName)
       .then(() => pollAndProcessTask());
     sendResponse({ ok: true });
 
   } else if (message.action === 'postFailed') {
-    const stored = chrome.storage.local.get(PROCESSING_KEY);
-    stored.then(s => {
-      const processing = s[PROCESSING_KEY];
-      if (processing && processing.retryCount < 2) {
-        // Retry transient failures
-        retryTask(processing.id);
-      } else {
-        chrome.storage.local.remove(PROCESSING_KEY);
-        updateTaskStatus(message.postId, 'failed', null, null, null, null, message.error || 'Unknown error')
-          .then(() => pollAndProcessTask());
-      }
-    });
+    chrome.storage.local.remove('currentProcessingPost');
+    handlePostFailed(message);
     sendResponse({ ok: true });
 
   } else if (message.action === 'fetchImage') {
@@ -236,6 +235,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// ─── Handle postFailed with proper await (avoid Promise race) ───
+async function handlePostFailed(message) {
+  const stored = await chrome.storage.local.get(PROCESSING_KEY);
+  const processing = stored[PROCESSING_KEY];
+
+  if (processing && processing.retryCount < 2) {
+    // Retry transient failures
+    retryTask(processing.id);
+  } else {
+    await chrome.storage.local.remove(PROCESSING_KEY);
+    await updateTaskStatus(message.postId, 'failed', null, null, null, null, message.error || 'Unknown error');
+    pollAndProcessTask();
+  }
+}
+
 // ─── Update task status on backend ───
 async function updateTaskStatus(taskId, status, resultUrl, actorUrl, actorName, targetName, errorMsg) {
   try {
@@ -254,7 +268,7 @@ async function updateTaskStatus(taskId, status, resultUrl, actorUrl, actorName, 
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionData.api_token}`
+        'Authorization': `Bearer ${localData.api_token}`
       },
       body: JSON.stringify(body)
     });
