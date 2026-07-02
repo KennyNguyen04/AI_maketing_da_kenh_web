@@ -13,6 +13,7 @@ interface Vault {
   voice_profile?: Record<string, unknown> | null
   system_prompt?: string | null
   source_type?: string | null
+  raw_input?: string | null
 }
 
 interface VaultManagementProps {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeVoiceFromForm } from '@/lib/ai'
-import { getCachedProfile, saveToCache } from '@/lib/voice-cache'
+import { getCachedProfile, saveToCache, CachedVoiceProfile } from '@/lib/voice-cache'
 
 export async function POST(request: Request) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const formKey = JSON.stringify({ topics, tone, audience, style, samples: samples || '' })
-    let voiceProfile: any
+    let voiceProfile: CachedVoiceProfile | null = null
 
     if (!forceRefresh) {
       const cached = await getCachedProfile(user.id, formKey, 'form')
@@ -33,8 +33,9 @@ export async function POST(request: Request) {
 
     if (!voiceProfile) {
       console.log('[cache miss] form vault for user', user.id)
-      voiceProfile = await analyzeVoiceFromForm({ topics, tone, audience, style, samples })
-      await saveToCache(user.id, formKey, 'form', voiceProfile)
+      const analyzed = await analyzeVoiceFromForm({ topics, tone, audience, style, samples })
+      voiceProfile = analyzed
+      await saveToCache(user.id, formKey, 'form', analyzed)
     }
 
     // Construct raw_input string for historical reference
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
         source_type: 'form',
         raw_input: rawInput,
         voice_profile: voiceProfile,
-        system_prompt: voiceProfile.system_prompt_cache,
+        system_prompt: voiceProfile!.system_prompt_cache,
         is_active: true, // Directly active because we analyzed it synchronously
       })
       .select('id')

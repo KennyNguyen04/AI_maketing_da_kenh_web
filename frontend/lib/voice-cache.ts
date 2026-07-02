@@ -7,6 +7,12 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export type CacheSourceType = 'text' | 'url' | 'form'
 
+export interface CachedVoiceProfile {
+  tone?: string | string[]
+  system_prompt_cache?: string
+  [key: string]: unknown
+}
+
 export function hashContent(text: string): string {
   const normalized = text
     .normalize('NFC')
@@ -20,7 +26,7 @@ export async function getCachedProfile(
   userId: string,
   content: string,
   sourceType: CacheSourceType,
-): Promise<any | null> {
+): Promise<CachedVoiceProfile | null> {
   const hash = hashContent(content)
   const { data } = await supabaseAdmin
     .from('voice_analysis_cache')
@@ -49,7 +55,7 @@ export async function saveToCache(
   userId: string,
   content: string,
   sourceType: CacheSourceType,
-  profile: any,
+  profile: CachedVoiceProfile,
 ): Promise<void> {
   const hash = hashContent(content)
   await supabaseAdmin.from('voice_analysis_cache').upsert(
