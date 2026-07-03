@@ -26,6 +26,7 @@ interface Vault {
   name: string
   display_name?: string | null
   is_active: boolean
+  voice_profile?: unknown
 }
 
 export function NewJobForm() {
@@ -70,7 +71,8 @@ export function NewJobForm() {
       setIsLoadingVault(true)
       const { data } = await supabase
         .from('brand_vaults')
-        .select('id, name, display_name, is_active')
+        .select('id, name, display_name, is_active, voice_profile')
+        .not('voice_profile', 'is', null)
         .order('created_at', { ascending: false })
 
       if (data && data.length > 0) {

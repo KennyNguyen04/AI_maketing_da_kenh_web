@@ -69,7 +69,7 @@ export default function OnboardingPage() {
 
         const { data, error } = await supabase
           .from('brand_vaults')
-          .select('is_active, user_id')
+          .select('is_active, voice_profile, user_id')
           .eq('id', vaultId)
           .single()
 
@@ -89,7 +89,7 @@ export default function OnboardingPage() {
           return
         }
 
-        if (data?.is_active) {
+        if (data?.is_active && data?.voice_profile) {
           stopPolling()
           router.push(`/onboarding/confirm?vaultId=${vaultId}`)
         }

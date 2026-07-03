@@ -1,17 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 export function AnalyzingLoader() {
-  const router = useRouter()
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => router.push('/onboarding/confirm'), 4000)
-    return () => window.clearTimeout(timer)
-  }, [router])
-
   return (
     <div className="py-16 text-center">
       <div className="mx-auto mb-8 h-16 w-16 rounded-full border-4 border-muted-stone border-t-sky-blue [animation:spin_.8s_linear_infinite]" />
