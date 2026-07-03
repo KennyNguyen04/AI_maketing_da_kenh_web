@@ -65,4 +65,42 @@ describe('lib/ai/parser: cleanAndParseJson', () => {
     expect(typeof result).toBe('object')
     expect(result).not.toBeInstanceOf(String)
   })
+
+  it('parses JSON when response starts with preamble text (no fences)', () => {
+    const input = 'Here is the analysis you requested:\n{"tone":["friendly"],"sentence_style":"short"}'
+    expect(cleanAndParseJson(input)).toEqual({ tone: ['friendly'], sentence_style: 'short' })
+  })
+
+  it('skips braces inside string values to find the outer object', () => {
+    const input = '{"tone":["a"],"system_prompt_cache":"you can write {examples} like this"}'
+    expect(cleanAndParseJson(input)).toEqual({
+      tone: ['a'],
+      system_prompt_cache: 'you can write {examples} like this',
+    })
+  })
+
+  it('handles escaped quotes inside string values', () => {
+    const input = '{"tone":["a"],"system_prompt_cache":"he said \\"hello\\" to me"}'
+    expect(cleanAndParseJson(input)).toEqual({
+      tone: ['a'],
+      system_prompt_cache: 'he said "hello" to me',
+    })
+  })
+
+  it('extracts the LAST top-level object when multiple appear in the text', () => {
+    const input = 'First draft: {"tone":["x"]}\nFinal answer:\n{"tone":["y"],"sentence_style":"medium"}'
+    expect(cleanAndParseJson(input)).toEqual({ tone: ['y'], sentence_style: 'medium' })
+  })
+
+  it('extracts JSON from inside a code fence even when preamble is also present', () => {
+    const input = 'Sure! Here you go:\n```json\n{"k":1}\n```\nLet me know if you need more.'
+    expect(cleanAndParseJson(input)).toEqual({ k: 1 })
+  })
+
+  it('repairs truncated JSON missing closing braces and string terminator', () => {
+    const input = '{"tone":["friendly"],"system_prompt_cache":"You are a helpful wri'
+    const parsed = cleanAndParseJson(input) as Record<string, unknown>
+    expect(parsed.tone).toEqual(['friendly'])
+    expect(typeof parsed.system_prompt_cache).toBe('string')
+  })
 })

@@ -78,8 +78,11 @@ describe('lib/ai/config: VOICE_ANALYSIS_CONFIG', () => {
   })
 
   it('has reasonable maxTokens for analysis task', () => {
-    expect(VOICE_ANALYSIS_CONFIG.maxTokens).toBeGreaterThanOrEqual(512)
-    expect(VOICE_ANALYSIS_CONFIG.maxTokens).toBeLessThanOrEqual(2048)
+    // Voice analysis returns a JSON object with a long `system_prompt_cache` field.
+    // 1024 was too low — Gemini would truncate mid-string, breaking JSON.parse.
+    // We allow up to 4096 so the full response fits.
+    expect(VOICE_ANALYSIS_CONFIG.maxTokens).toBeGreaterThanOrEqual(2048)
+    expect(VOICE_ANALYSIS_CONFIG.maxTokens).toBeLessThanOrEqual(4096)
   })
 })
 
