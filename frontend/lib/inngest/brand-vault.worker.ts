@@ -55,8 +55,21 @@ export const analyzeBrandVaultText = inngest.createFunction(
 )
 
 // ─── Event: Analyze URL ───
+// `timeouts.start` caps the first attempt at 60s and `timeouts.finish` caps the
+// total workflow at 120s. This prevents a 15-minute Readability hang from
+// stalling the workflow indefinitely (known issue with e-commerce pages).
+// On failure, Inngest still has `retries: 1`, after which the onboarding
+// page polling logic detects the still-empty voice_profile and surfaces a
+// friendly error to the user.
 export const analyzeBrandVaultUrl = inngest.createFunction(
-  { id: 'analyze-brand-vault-url', retries: 3 },
+  {
+    id: 'analyze-brand-vault-url',
+    retries: 1,
+    timeouts: {
+      start: '60s',
+      finish: '120s',
+    },
+  },
   { event: 'brand_vault/analyze.url' },
   async ({ event, step }) => {
     const { url, userId, vaultId, forceRefresh } = event.data
@@ -101,5 +114,5 @@ export const analyzeBrandVaultUrl = inngest.createFunction(
     })
 
     return { success: true, vaultId }
-  }
+  },
 )

@@ -89,6 +89,18 @@ export default function OnboardingPage() {
           return
         }
 
+        // Worker marked vault inactive because URL scrape failed
+        // (e.g. e-commerce, JS-required, or >1MB HTML). Surface that to the
+        // user instead of silently spinning.
+        if (data && !data.is_active && !data.voice_profile && pollAttemptsRef.current >= 3) {
+          stopPolling()
+          setLoading(false)
+          setError(
+            'Phân tích URL thất bại — trang này không tương thích (có thể là trang sản phẩm/JS-heavy). Vui lòng dùng tuỳ chọn "Dán text" để thay thế.',
+          )
+          return
+        }
+
         if (data?.is_active && data?.voice_profile) {
           stopPolling()
           router.push(`/onboarding/confirm?vaultId=${vaultId}`)

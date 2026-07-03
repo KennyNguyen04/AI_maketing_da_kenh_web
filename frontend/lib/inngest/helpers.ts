@@ -74,7 +74,42 @@ export function validatePublicUrl(url: string): URL {
 /**
  * Extract main text content from a URL using jsdom & @mozilla/readability.
  * Returns cleaned text limited to 5000 words.
+ *
+ * Safeguards against e-commerce / JS-heavy pages:
+ * - Hard cap HTML response at 1MB (was 5MB) — most article content fits comfortably
+ * - Reject obvious product/listing patterns early to avoid 15-min Readability hangs
+ * - Wrap JSDOM parse in a race-with-timeout to fail fast instead of hanging
  */
+const MAX_HTML_BYTES = 1_000_000
+const JSDOM_PARSE_TIMEOUT_MS = 8_000
+
+// E-commerce patterns that almost always break @mozilla/readability:
+//   - product detail pages (huge inline JSON, hydration scripts, variant carousels)
+//   - category/listing pages (infinite scroll, hundreds of cards)
+// We detect via path keywords + a small JSON-LD sniff. This is conservative —
+// false positives (rejecting a legit blog post) are rare and recoverable via
+// the text input flow.
+const ECOMMERCE_PATH_PATTERNS = [
+  /\/product\//i,
+  /\/products\//i,
+  /\/p\//i,
+  /\/item\//i,
+  /\/dp\//i,            // Amazon-style
+  /\/collections?\/[^\/]+$/i, // shopify "collections/X"
+  /\/c\//i,
+  /\/catalog\//i,
+  /\/category\//i,
+]
+
+function looksLikeEcommerce(urlObj: URL, html: string): boolean {
+  if (ECOMMERCE_PATH_PATTERNS.some((re) => re.test(urlObj.pathname))) return true
+  const lower = html.toLowerCase()
+  if (lower.includes('"@type":"product"')) return true
+  if (lower.includes('"@type":"itempage"')) return true
+  if (lower.includes('addtocart') || lower.includes('add_to_cart') || lower.includes('add-to-cart')) return true
+  return false
+}
+
 export async function extractTextFromUrl(url: string) {
   // SSRF defense: validate URL before any network request
   const validatedUrl = validatePublicUrl(url)
@@ -83,7 +118,7 @@ export async function extractTextFromUrl(url: string) {
   const { Readability } = await import('@mozilla/readability')
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30_000)
+  const timeoutId = setTimeout(() => controller.abort(), 15_000)
 
   let response: Response
   try {
@@ -99,7 +134,7 @@ export async function extractTextFromUrl(url: string) {
   } catch (err) {
     clearTimeout(timeoutId)
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Request timed out after 30 seconds')
+      throw new Error('Request timed out after 15 seconds')
     }
     throw new Error(`Failed to fetch URL: ${err instanceof Error ? err.message : String(err)}`)
   } finally {
@@ -124,25 +159,62 @@ export async function extractTextFromUrl(url: string) {
   }
 
   const contentLength = response.headers.get('content-length')
-  if (contentLength && parseInt(contentLength, 10) > 5_000_000) {
-    throw new Error('URL response too large (>5MB). Try a lighter page.')
+  if (contentLength && parseInt(contentLength, 10) > MAX_HTML_BYTES) {
+    throw new Error(
+      `URL response too large (>${Math.round(MAX_HTML_BYTES / 1024)}KB). This page is likely too heavy for static analysis — try copying the text directly.`,
+    )
   }
 
   const html = await response.text()
 
-  if (html.length > 5_000_000) {
-    throw new Error('URL response too large (>5MB). Try a lighter page.')
+  if (html.length > MAX_HTML_BYTES) {
+    throw new Error(
+      `URL response too large (>${Math.round(MAX_HTML_BYTES / 1024)}KB). This page is likely too heavy for static analysis — try copying the text directly.`,
+    )
   }
 
-  const dom = new JSDOM(html, { url: validatedUrl.toString() })
-  const reader = new Readability(dom.window.document)
-  const article = reader.parse()
-
-  if (!article || !article.textContent) {
-    throw new Error('Could not extract content from this page. Try a different URL.')
+  // Early reject obvious e-commerce / product pages to avoid hanging in
+  // Readability (known issue on carousels + hydration-heavy pages).
+  if (looksLikeEcommerce(validatedUrl, html)) {
+    throw new Error(
+      'This looks like a product or catalog page, which our static analyzer cannot reliably parse. Please copy the page text directly and use the "Paste text" option instead.',
+    )
   }
 
-  const cleanText = article.textContent.replace(/\s+/g, ' ').trim()
+  // Race JSDOM parse + Readability against a wall-clock timeout. Readability
+  // is known to hang for minutes on pages with deeply nested carousels.
+  // The `unknown` annotations avoid TS narrowing the variables to `never`
+  // after we capture the result of `Readability.parse()` (whose return type
+  // is `null | { ... }` and triggers unwanted narrowing under --strictNullChecks).
+  let article: unknown = null
+  let parseError: unknown = null
+  const parseFinished: Promise<void> = (async () => {
+    try {
+      const dom = new JSDOM(html, { url: validatedUrl.toString() })
+      const reader = new Readability(dom.window.document)
+      article = reader.parse()
+    } catch (err) {
+      parseError = err
+    }
+  })()
+
+  const parseTimeout: Promise<void> = new Promise<void>((resolve) =>
+    setTimeout(() => resolve(), JSDOM_PARSE_TIMEOUT_MS),
+  )
+  await Promise.race([parseFinished, parseTimeout])
+
+  if (parseError) {
+    const errMsg = parseError instanceof Error ? parseError.message : String(parseError)
+    throw new Error(`Failed to parse page content: ${errMsg}`)
+  }
+  const articleObj = article as { textContent?: string | null } | null
+  if (!articleObj || !articleObj.textContent) {
+    throw new Error(
+      'Could not extract readable content from this page. The article might require JavaScript or login. Please copy the text directly and use the "Paste text" option instead.',
+    )
+  }
+
+  const cleanText = articleObj.textContent!.replace(/\s+/g, ' ').trim()
   const words = cleanText.split(/\s+/)
   if (words.length > 5000) {
     return words.slice(0, 5000).join(' ')

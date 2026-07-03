@@ -127,6 +127,7 @@ export default function OnboardingConfirmPage() {
         .update({
           voice_profile: voiceProfile,
           system_prompt: systemPrompt,
+          is_active: true,
         })
         .eq('id', vaultId)
         .eq('user_id', currentUserId)
