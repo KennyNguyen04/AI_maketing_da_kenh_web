@@ -165,21 +165,28 @@ export default function OnboardingConfirmPage() {
       // DB hasn't been migrated and `display_name` doesn't exist yet), fall
       // back to writing `name` only so the rename still lands and the user
       // isn't stuck on a generic "My Brand Voice" forever.
-      let updatePayload: Record<string, unknown> = {
+      // Single payload object — also without `display_name` we keep it
+      // identical, so a `const` is safe here.
+      const basePayload = {
         name: trimmedName,
         voice_profile: voiceProfile,
         system_prompt: systemPrompt,
         is_active: true,
       }
 
+      let updatePayload: Record<string, unknown> = {
+        ...basePayload,
+        display_name: trimmedName,
+      }
       let { error } = await supabase
         .from('brand_vaults')
-        .update({ ...updatePayload, display_name: trimmedName })
+        .update(updatePayload)
         .eq('id', vaultId)
         .eq('user_id', currentUserId)
 
       if (error && /display_name/i.test(error.message) && /does not exist|not found/i.test(error.message)) {
         // Retry without display_name — column missing on this DB.
+        updatePayload = { ...basePayload }
         const retry = await supabase
           .from('brand_vaults')
           .update(updatePayload)
@@ -249,7 +256,7 @@ export default function OnboardingConfirmPage() {
           Tên Brand Vault
         </label>
         <p className="mt-1 text-xs text-app-muted">
-          Đặt tên để dễ nhận biết khi bạn có nhiều vault. Ví dụ: "Giọng Lifestyle", "Giọng Tech Review"...
+          Đặt tên để dễ nhận biết khi bạn có nhiều vault. Ví dụ: &ldquo;Giọng Lifestyle&rdquo;, &ldquo;Giọng Tech Review&rdquo;&hellip;
         </p>
         <input
           id="vault-name"
