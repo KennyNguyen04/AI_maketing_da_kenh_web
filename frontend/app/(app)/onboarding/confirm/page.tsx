@@ -57,9 +57,11 @@ export default function OnboardingConfirmPage() {
         setCurrentUserId(userData.user.id)
 
         // IDOR defense: explicitly filter by user_id (in addition to RLS)
+        // Also select error_message so we can short-circuit polling when the
+        // worker has reported a failure (e.g. Gemini error, e-commerce page).
         const { data, error } = await supabase
           .from('brand_vaults')
-          .select('voice_profile, system_prompt, user_id, is_active')
+          .select('voice_profile, system_prompt, user_id, is_active, error_message')
           .eq('id', vaultId!)
           .eq('user_id', userData.user.id)
           .single()
@@ -69,6 +71,23 @@ export default function OnboardingConfirmPage() {
           setLoading(false)
           setWaitingForAnalysis(false)
           stopPolling()
+          return
+        }
+
+        // Worker reported a failure — surface it immediately instead of
+        // spinning the polling UI for another 5 minutes. Without this,
+        // users would see "Đang phân tích..." even after the analysis has
+        // terminally failed, and then /dashboard/new would not show voice
+        // (because voice_profile never got set), making the symptom look
+        // like "voice disappeared" when in reality it was never saved.
+        if (data.error_message && !data.voice_profile) {
+          stopPolling()
+          setWaitingForAnalysis(false)
+          setLoading(false)
+          setToast({
+            type: 'error',
+            message: `Phân tích thất bại: ${data.error_message} Vui lòng thử lại hoặc dùng nguồn khác.`,
+          })
           return
         }
 

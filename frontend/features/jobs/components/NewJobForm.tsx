@@ -69,18 +69,45 @@ export function NewJobForm() {
   useEffect(() => {
     async function loadVault() {
       setIsLoadingVault(true)
-      const { data } = await supabase
-        .from('brand_vaults')
-        .select('id, name, display_name, is_active, voice_profile')
-        .not('voice_profile', 'is', null)
-        .order('created_at', { ascending: false })
+      try {
+        // Defense in depth: explicit user_id filter in addition to RLS, and
+        // don't filter on voice_profile being non-null here — a vault with
+        // voice_profile=null is still a valid vault to display (we just won't
+        // be able to create content against it). Filtering on voice_profile
+        // was hiding vaults from users who had re-analyze/regenerate runs in
+        // flight, which made /dashboard/new look "empty" right after the
+        // user confirmed voice on /onboarding/confirm.
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setIsLoadingVault(false)
+          return
+        }
 
-      if (data && data.length > 0) {
-        setVaults(data)
-        const activeVault = data.find((item) => item.is_active) || data[0]
-        setVaultId(activeVault.id)
+        const { data, error } = await supabase
+          .from('brand_vaults')
+          .select('id, name, display_name, is_active, voice_profile')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('[NewJobForm] loadVault error:', error)
+        }
+
+        if (data && data.length > 0) {
+          // Prefer active vaults with a usable voice_profile. Fall back to
+          // any active vault, then any vault with a voice_profile, then the
+          // most recent vault. This ensures we always show a selection rather
+          // than asking the user to recreate voice profile they already saved.
+          const activeWithVoice = data.find((v: any) => v.is_active && v.voice_profile)
+          const anyActive = data.find((v: any) => v.is_active)
+          const anyWithVoice = data.find((v: any) => v.voice_profile)
+          const selected = activeWithVoice || anyActive || anyWithVoice || data[0]
+          setVaults(data)
+          setVaultId(selected.id)
+        }
+      } finally {
+        setIsLoadingVault(false)
       }
-      setIsLoadingVault(false)
     }
     loadVault()
   }, [supabase])
@@ -126,7 +153,14 @@ export function NewJobForm() {
       setJobId(data.jobId)
     } catch (err: unknown) {
       console.error(err)
-      const msg = err instanceof Error ? err.message : String(err)
+      let msg = err instanceof Error ? err.message : String(err)
+      // Map common API errors to actionable next steps so the user knows
+      // exactly what to fix instead of staring at a generic toast.
+      if (msg.includes('Brand Vault not found')) {
+        msg = 'Brand Vault này chưa được kích hoạt. Mở "Quản lý Brand Vault" để kích hoạt hoặc chọn vault khác.'
+      } else if (msg.includes('Daily limit')) {
+        msg = 'Bạn đã đạt giới hạn 20 lần/ngày của gói miễn phí.'
+      }
       setError(msg)
       setToastMessage(msg)
       setToastType('error')
@@ -152,7 +186,14 @@ export function NewJobForm() {
               {isLoadingVault ? (
                 <p className="text-xs text-app-muted">Đang kiểm tra cấu hình...</p>
               ) : activeVault ? (
-                <p className="text-xs text-app-muted">{activeVault.display_name || activeVault.name} đang hoạt động</p>
+                <>
+                  <p className="text-xs text-app-muted">{activeVault.display_name || activeVault.name} đang hoạt động</p>
+                  {!activeVault.voice_profile ? (
+                    <p className="mt-1 text-xs text-vibrant-orange">
+                      Vault này chưa có voice profile — chọn vault khác hoặc phân tích lại.
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <p className="text-xs text-vibrant-orange">Chưa có Brand Vault để tạo nội dung.</p>
               )}
@@ -249,7 +290,12 @@ export function NewJobForm() {
           value={title}
           onChange={setTitle}
         />
-        <Button type="submit" size="lg" className="w-full" disabled={channels.length === 0 || loading || !vaultId}>
+        <Button
+        type="submit"
+        size="lg"
+        className="w-full"
+        disabled={channels.length === 0 || loading || !vaultId || !activeVault?.voice_profile}
+      >
           {loading ? 'Đang gửi...' : (
             <>
               <Link2 className="h-4 w-4" /> Tạo bản nháp

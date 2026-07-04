@@ -20,11 +20,14 @@ export async function POST(request: Request) {
     }
 
     // Insert a pending record in brand_vaults
+    // Provide display_name so this works on databases that have already
+    // applied migration 003 (which sets display_name NOT NULL).
     const { data: vault, error: insertError } = await supabase
       .from('brand_vaults')
       .insert({
         user_id: user.id,
         name: 'My Brand Voice',
+        display_name: 'My Brand Voice',
         source_type: 'text',
         raw_input: text,
         is_active: false, // Will be set to true by Inngest when done

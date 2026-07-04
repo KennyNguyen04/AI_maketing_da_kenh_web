@@ -20,11 +20,18 @@ export async function POST(request: Request) {
     }
 
     // Insert a pending record in brand_vaults
+    // Provide display_name to satisfy the NOT NULL constraint added in
+    // migration 003 (the column was added later than the original schema).
+    // Without this, the insert would fail with "null value in column
+    // 'display_name' violates not-null constraint" on any DB where the
+    // migration has been applied. Defaulting to `name` keeps existing
+    // dashboard / NewJobForm display logic working unchanged.
     const { data: vault, error: insertError } = await supabase
       .from('brand_vaults')
       .insert({
         user_id: user.id,
         name: 'My Brand Voice',
+        display_name: 'My Brand Voice',
         source_type: 'url',
         raw_input: url,
         is_active: false,

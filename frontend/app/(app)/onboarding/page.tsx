@@ -69,7 +69,7 @@ export default function OnboardingPage() {
 
         const { data, error } = await supabase
           .from('brand_vaults')
-          .select('is_active, voice_profile, user_id')
+          .select('is_active, voice_profile, user_id, error_message')
           .eq('id', vaultId)
           .single()
 
@@ -89,14 +89,27 @@ export default function OnboardingPage() {
           return
         }
 
-        // Worker marked vault inactive because URL scrape failed
-        // (e.g. e-commerce, JS-required, or >1MB HTML). Surface that to the
-        // user instead of silently spinning.
-        if (data && !data.is_active && !data.voice_profile && pollAttemptsRef.current >= 3) {
+        // Worker marks vault inactive only when analysis has truly failed.
+        // We can't use "still false at this poll iteration" as the failure signal
+        // because the row starts with `is_active=false` at insert time and the
+        // worker needs 6-30+ seconds to fetch + parse + analyze. We instead wait
+        // for a generous attempt budget (>=15 attempts ~= 30s) AND additionally
+        // verify that the worker has actually reported a failure via
+        // `error_message` (set on `extractTextFromUrl` exceptions).
+        if (
+          data &&
+          !data.is_active &&
+          !data.voice_profile &&
+          pollAttemptsRef.current >= 15 &&
+          (data as { error_message?: string | null }).error_message
+        ) {
+          const errMsg =
+            (data as { error_message?: string | null }).error_message ||
+            'Không rõ lý do'
           stopPolling()
           setLoading(false)
           setError(
-            'Phân tích URL thất bại — trang này không tương thích (có thể là trang sản phẩm/JS-heavy). Vui lòng dùng tuỳ chọn "Dán text" để thay thế.',
+            `Phân tích URL thất bại: ${errMsg} Vui lòng thử URL khác hoặc dùng tuỳ chọn "Dán text".`,
           )
           return
         }

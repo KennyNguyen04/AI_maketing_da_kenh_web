@@ -16,7 +16,7 @@ export const analyzeBrandVaultText = inngest.createFunction(
   async ({ event, step }) => {
     const { text, userId, vaultId, forceRefresh } = event.data
 
-    // Step 1: Analyze text using Gemini (with cache layer)
+    // Step 1: Analyze text using Gemini (with cache layer + error reporting)
     const voiceProfile = await step.run('analyze-voice-with-ai', async () => {
       if (!forceRefresh) {
         const cached = await getCachedProfile(userId, text, 'text')
@@ -29,6 +29,14 @@ export const analyzeBrandVaultText = inngest.createFunction(
       const fresh = await analyzeVoice(text)
       await saveToCache(userId, text, 'text', fresh)
       return fresh
+    }).catch(async (err) => {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      await supabaseAdmin
+        .from('brand_vaults')
+        .update({ error_message: errMsg })
+        .eq('id', vaultId)
+        .eq('user_id', userId)
+      throw err
     })
 
     // Step 2: Save to Database
@@ -74,12 +82,25 @@ export const analyzeBrandVaultUrl = inngest.createFunction(
   async ({ event, step }) => {
     const { url, userId, vaultId, forceRefresh } = event.data
 
-    // Step 1: Scrape URL
-    const text = await step.run('scrape-url', async () => {
-      return await extractTextFromUrl(url)
-    })
+    // Step 1: Scrape URL (with structured failure reporting so the onboarding
+    // polling loop can show a real reason instead of a generic "incompatible
+    // page" error).
+    let text = ''
+    try {
+      text = await step.run('scrape-url', async () => {
+        return await extractTextFromUrl(url)
+      })
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      await supabaseAdmin
+        .from('brand_vaults')
+        .update({ error_message: errMsg })
+        .eq('id', vaultId)
+        .eq('user_id', userId)
+      throw err
+    }
 
-    // Step 2: Analyze text (with cache layer)
+    // Step 2: Analyze text (with cache layer + structured failure reporting)
     const voiceProfile = await step.run('analyze-voice-with-ai', async () => {
       if (!forceRefresh) {
         const cached = await getCachedProfile(userId, text, 'url')
@@ -92,6 +113,19 @@ export const analyzeBrandVaultUrl = inngest.createFunction(
       const fresh = await analyzeVoice(text)
       await saveToCache(userId, text, 'url', fresh)
       return fresh
+    }).catch(async (err) => {
+      // Mirror the scrape-url error path: persist a reason to the vault row so
+      // the onboarding polling loop can surface it. Without this, a Gemini
+      // failure would leave the row as (voice_profile=null, is_active=false,
+      // error_message=null) and the user would see the generic "URL
+      // incompatible" message forever, with no real reason to debug.
+      const errMsg = err instanceof Error ? err.message : String(err)
+      await supabaseAdmin
+        .from('brand_vaults')
+        .update({ error_message: errMsg })
+        .eq('id', vaultId)
+        .eq('user_id', userId)
+      throw err
     })
 
     // Step 3: Save to Database
