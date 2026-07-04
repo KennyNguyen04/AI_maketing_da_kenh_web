@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Fingerprint, Loader2 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { VoiceProfilePreview } from '@/features/brand-vault/components/VoiceProfilePreview'
@@ -14,6 +14,7 @@ import { Toast } from '@/components/ui/Toast'
 
 const CONFIRM_POLL_INTERVAL_MS = 2000
 const CONFIRM_MAX_POLL_ATTEMPTS = 150 // ~5 minutes
+const DEFAULT_VAULT_NAME = 'My Brand Voice'
 
 export default function OnboardingConfirmPage() {
   const router = useRouter()
@@ -21,6 +22,8 @@ export default function OnboardingConfirmPage() {
   const vaultId = searchParams.get('vaultId')
   const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null)
   const [systemPrompt, setSystemPrompt] = useState('')
+  const [vaultName, setVaultName] = useState(DEFAULT_VAULT_NAME)
+  const [nameTouched, setNameTouched] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [waitingForAnalysis, setWaitingForAnalysis] = useState(false)
@@ -61,7 +64,7 @@ export default function OnboardingConfirmPage() {
         // worker has reported a failure (e.g. Gemini error, e-commerce page).
         const { data, error } = await supabase
           .from('brand_vaults')
-          .select('voice_profile, system_prompt, user_id, is_active, error_message')
+          .select('voice_profile, system_prompt, user_id, is_active, error_message, name, display_name')
           .eq('id', vaultId!)
           .eq('user_id', userData.user.id)
           .single()
@@ -120,6 +123,12 @@ export default function OnboardingConfirmPage() {
           stopPolling()
           setVoiceProfile(data.voice_profile as VoiceProfile)
           setSystemPrompt(data.system_prompt || '')
+          // Only seed the name input the first time — never clobber what the
+          // user has typed if they're editing on this page.
+          if (!nameTouched) {
+            const seed = (data.display_name || data.name || '').trim() || DEFAULT_VAULT_NAME
+            setVaultName(seed)
+          }
           setLoading(false)
           setWaitingForAnalysis(false)
         }
@@ -138,18 +147,46 @@ export default function OnboardingConfirmPage() {
   async function handleSave() {
     if (!vaultId || !voiceProfile || !currentUserId) return
 
+    const trimmedName = vaultName.trim()
+    if (!trimmedName) {
+      setToast({ type: 'error', message: 'Vui lòng đặt tên cho Brand Vault trước khi lưu.' })
+      return
+    }
+
     setSaving(true)
     try {
-      // IDOR defense: explicitly filter by user_id (in addition to RLS)
-      const { error } = await supabase
+      // IDOR defense: explicitly filter by user_id (in addition to RLS).
+      // We persist the user-chosen name into both `name` and `display_name`
+      // because (a) the dashboard card and the vaults page read `display_name`
+      // when present and fall back to `name`, and (b) keeping them in sync
+      // avoids the previous "rename works in some places only" confusion.
+      //
+      // Resilience: try writing both columns first; if that fails (e.g. the
+      // DB hasn't been migrated and `display_name` doesn't exist yet), fall
+      // back to writing `name` only so the rename still lands and the user
+      // isn't stuck on a generic "My Brand Voice" forever.
+      let updatePayload: Record<string, unknown> = {
+        name: trimmedName,
+        voice_profile: voiceProfile,
+        system_prompt: systemPrompt,
+        is_active: true,
+      }
+
+      let { error } = await supabase
         .from('brand_vaults')
-        .update({
-          voice_profile: voiceProfile,
-          system_prompt: systemPrompt,
-          is_active: true,
-        })
+        .update({ ...updatePayload, display_name: trimmedName })
         .eq('id', vaultId)
         .eq('user_id', currentUserId)
+
+      if (error && /display_name/i.test(error.message) && /does not exist|not found/i.test(error.message)) {
+        // Retry without display_name — column missing on this DB.
+        const retry = await supabase
+          .from('brand_vaults')
+          .update(updatePayload)
+          .eq('id', vaultId)
+          .eq('user_id', currentUserId)
+        error = retry.error
+      }
 
       if (error) throw error
 
@@ -206,6 +243,31 @@ export default function OnboardingConfirmPage() {
         Kiểm tra lại thông tin giọng văn AI đã phân tích. Bạn có thể chỉnh sửa trước khi lưu.
       </p>
 
+      <div className="mt-6 rounded-card border border-app-line bg-pure-canvas p-4">
+        <label htmlFor="vault-name" className="flex items-center gap-2 text-sm font-medium text-dark-charcoal">
+          <Fingerprint className="h-4 w-4 text-sky-blue" />
+          Tên Brand Vault
+        </label>
+        <p className="mt-1 text-xs text-app-muted">
+          Đặt tên để dễ nhận biết khi bạn có nhiều vault. Ví dụ: "Giọng Lifestyle", "Giọng Tech Review"...
+        </p>
+        <input
+          id="vault-name"
+          type="text"
+          value={vaultName}
+          onChange={(event) => {
+            setVaultName(event.target.value)
+            setNameTouched(true)
+          }}
+          placeholder={DEFAULT_VAULT_NAME}
+          maxLength={80}
+          className="mt-3 w-full rounded-button border border-app-line bg-pure-canvas px-3 py-2 text-sm text-midnight-ink placeholder:text-app-muted focus:border-sky-blue focus:outline-none focus:ring-2 focus:ring-sky-blue/20"
+        />
+        {nameTouched && !vaultName.trim() && (
+          <p className="mt-2 text-xs text-vibrant-orange">Tên không được để trống.</p>
+        )}
+      </div>
+
       {toast && (
         <Toast
           type={toast.type}
@@ -230,7 +292,7 @@ export default function OnboardingConfirmPage() {
         <Button variant="ghost" onClick={() => router.push('/onboarding')}>
           Quay lại
         </Button>
-        <Button size="lg" onClick={handleSave} disabled={saving || !voiceProfile}>
+        <Button size="lg" onClick={handleSave} disabled={saving || !voiceProfile || !vaultName.trim()}>
           {saving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
