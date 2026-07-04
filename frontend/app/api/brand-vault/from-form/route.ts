@@ -41,15 +41,14 @@ export async function POST(request: Request) {
     // Construct raw_input string for historical reference
     const rawInput = `Chủ đề: ${topics}\nGiọng văn: ${tone}\nĐộc giả: ${audience}\nVăn phong: ${style}\nMẫu câu: ${samples || 'Không có'}`
 
-    // Insert active brand vault record directly
-    // Provide display_name so the row satisfies the NOT NULL constraint
-    // added by migration 003 on databases where that migration has run.
+    // Insert active brand vault record directly.
+    // Omit `display_name` so the insert works regardless of whether
+    // migration 003/017 has been applied. Falls back to DB DEFAULT.
     const { data: vault, error: insertError } = await supabase
       .from('brand_vaults')
       .insert({
         user_id: user.id,
         name: 'My Brand Voice',
-        display_name: 'My Brand Voice',
         source_type: 'form',
         raw_input: rawInput,
         voice_profile: voiceProfile,
@@ -61,7 +60,14 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error('Supabase insert error in from-form:', insertError)
-      return NextResponse.json({ error: 'Failed to create brand vault record' }, { status: 500 })
+      return NextResponse.json(
+        {
+          error: 'Failed to create brand vault record',
+          detail: insertError.message,
+          code: insertError.code,
+        },
+        { status: 500 },
+      )
     }
 
     return NextResponse.json({ vaultId: vault.id, status: 'success' })

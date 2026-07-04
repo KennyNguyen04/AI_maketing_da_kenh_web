@@ -54,8 +54,8 @@ export function VaultManagement({ initialVaults }: VaultManagementProps) {
       })
 
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to reanalyze')
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || err.error || 'Failed to reanalyze')
       }
 
       setVaults((prev) =>

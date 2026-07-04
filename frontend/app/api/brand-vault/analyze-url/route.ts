@@ -19,19 +19,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid URL is required' }, { status: 400 })
     }
 
-    // Insert a pending record in brand_vaults
-    // Provide display_name to satisfy the NOT NULL constraint added in
-    // migration 003 (the column was added later than the original schema).
-    // Without this, the insert would fail with "null value in column
-    // 'display_name' violates not-null constraint" on any DB where the
-    // migration has been applied. Defaulting to `name` keeps existing
-    // dashboard / NewJobForm display logic working unchanged.
+    // Insert a pending record in brand_vaults.
+    // NOTE: We deliberately omit `display_name` here so the insert works
+    // on databases that haven't run migration 003 (no column) as well as
+    // those that have (column will fall back to its DEFAULT). Migration
+    // 017 backfills any nulls with `name` and ensures a DEFAULT exists.
     const { data: vault, error: insertError } = await supabase
       .from('brand_vaults')
       .insert({
         user_id: user.id,
         name: 'My Brand Voice',
-        display_name: 'My Brand Voice',
         source_type: 'url',
         raw_input: url,
         is_active: false,
@@ -41,7 +38,14 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error('Supabase insert error:', insertError)
-      return NextResponse.json({ error: 'Failed to create brand vault record' }, { status: 500 })
+      return NextResponse.json(
+        {
+          error: 'Failed to create brand vault record',
+          detail: insertError.message,
+          code: insertError.code,
+        },
+        { status: 500 },
+      )
     }
 
     // Trigger Inngest background job

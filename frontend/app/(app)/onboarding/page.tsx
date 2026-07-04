@@ -51,8 +51,12 @@ export default function OnboardingPage() {
       })
 
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || 'Failed to start analysis')
+        const errorData = await res.json().catch(() => ({}))
+        // Show server-side detail (e.g. "column display_name does not
+        // exist") instead of a generic "Failed to start analysis" so
+        // users and developers can immediately see the root cause.
+        const detail = errorData.detail || errorData.error || 'Failed to start analysis'
+        throw new Error(detail)
       }
 
       const { vaultId } = await res.json()
@@ -139,8 +143,9 @@ export default function OnboardingPage() {
       })
 
       if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || 'Failed to create brand vault')
+        const errorData = await res.json().catch(() => ({}))
+        const detail = errorData.detail || errorData.error || 'Failed to create brand vault'
+        throw new Error(detail)
       }
 
       const { vaultId } = await res.json()

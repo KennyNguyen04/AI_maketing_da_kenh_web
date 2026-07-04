@@ -19,15 +19,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Text must be at least 50 characters' }, { status: 400 })
     }
 
-    // Insert a pending record in brand_vaults
-    // Provide display_name so this works on databases that have already
-    // applied migration 003 (which sets display_name NOT NULL).
+    // Insert a pending record in brand_vaults.
+    // Omit `display_name` so the insert works regardless of whether
+    // migration 003/017 has been applied. The DB DEFAULT (or backfill
+    // in migration 017) handles nulls safely.
     const { data: vault, error: insertError } = await supabase
       .from('brand_vaults')
       .insert({
         user_id: user.id,
         name: 'My Brand Voice',
-        display_name: 'My Brand Voice',
         source_type: 'text',
         raw_input: text,
         is_active: false, // Will be set to true by Inngest when done
@@ -37,7 +37,14 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error('Supabase insert error:', insertError)
-      return NextResponse.json({ error: 'Failed to create brand vault record' }, { status: 500 })
+      return NextResponse.json(
+        {
+          error: 'Failed to create brand vault record',
+          detail: insertError.message,
+          code: insertError.code,
+        },
+        { status: 500 },
+      )
     }
 
     // Trigger Inngest background job
