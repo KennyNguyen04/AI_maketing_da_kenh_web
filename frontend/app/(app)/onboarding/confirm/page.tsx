@@ -154,7 +154,7 @@ export default function OnboardingConfirmPage() {
       if (error) throw error
 
       setToast({ type: 'success', message: 'Đã lưu Brand Vault thành công!' })
-      setTimeout(() => router.push('/dashboard'), 1200)
+      setTimeout(() => router.push('/vaults'), 1200)
     } catch (error) {
       console.error('Error saving vault:', error)
       setToast({ type: 'error', message: 'Không thể lưu Brand Vault' })

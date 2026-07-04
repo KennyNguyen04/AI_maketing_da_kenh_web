@@ -41,6 +41,14 @@ export default async function DashboardPage() {
     .limit(1)
     .single()
 
+  // Used to surface "Xem N vault khác" on the dashboard's Brand Vault card
+  // when the user has more than one vault. A second query is cheaper than
+  // reworking the vault query above, which already filters to active=true.
+  const { count: totalVaultsCount } = await supabase
+    .from('brand_vaults')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
   const stats = [
     { value: completed, label: 'Đã hoàn thành' },
     { value: jobs?.length || 0, label: 'Lần tái chế' },
@@ -81,7 +89,7 @@ export default async function DashboardPage() {
 
       <ExtensionStatusCheck />
 
-      <BrandVaultStatus vault={vault} />
+      <BrandVaultStatus vault={vault} totalVaults={totalVaultsCount || 0} />
 
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((item) => (

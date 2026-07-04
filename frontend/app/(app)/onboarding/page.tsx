@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { ArrowRight, Layers } from 'lucide-react'
 import { AnalyzingLoader } from '@/features/brand-vault/components/AnalyzingLoader'
 import { BrandVaultSetupForm } from '@/features/brand-vault/components/BrandVaultSetupForm'
 import { BrandVaultSetupText } from '@/features/brand-vault/components/BrandVaultSetupText'
@@ -182,6 +184,13 @@ export default function OnboardingPage() {
         <>
           <h1 className="whitespace-pre-line text-[48px] leading-none text-midnight-ink">Hãy cho AI biết{'\n'}bạn viết như thế nào.</h1>
           <p className="mt-5 text-dark-charcoal">Brand Vault là bộ nhớ giọng văn vĩnh cửu của bạn. Chỉ cần thiết lập 1 lần.</p>
+          <Link
+            href="/vaults"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-sky-blue hover:underline"
+          >
+            <Layers className="h-3.5 w-3.5" /> Xem các Brand Vault đã có
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
           {error && <div className="mt-4 rounded-md bg-vibrant-orange/10 p-3 text-sm text-vibrant-orange">{error}</div>}
           <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-app-muted">
             <input

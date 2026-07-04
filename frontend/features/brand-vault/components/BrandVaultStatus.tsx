@@ -1,13 +1,28 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Edit3, Fingerprint, Plus } from 'lucide-react'
+import { ArrowRight, Edit3, Fingerprint, Layers, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Tag } from '@/components/ui/Tag'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function BrandVaultStatus({ vault }: { vault: any }) {
+export interface VaultSummary {
+  id: string
+  name: string
+  display_name?: string | null
+  is_active: boolean
+  voice_profile?: any
+  source_type?: string | null
+  created_at: string
+}
+
+interface BrandVaultStatusProps {
+  vault: VaultSummary | null
+  totalVaults?: number
+}
+
+export function BrandVaultStatus({ vault, totalVaults = 0 }: BrandVaultStatusProps) {
   const router = useRouter()
 
   if (!vault) {
@@ -35,6 +50,7 @@ export function BrandVaultStatus({ vault }: { vault: any }) {
 
   const voiceProfile = typeof vault.voice_profile === 'string' ? JSON.parse(vault.voice_profile) : vault.voice_profile
   const tone = voiceProfile?.tone?.slice(0, 3).join(' · ') || 'Mặc định'
+  const inactiveCount = Math.max(0, totalVaults - 1)
 
   return (
     <Card>
@@ -45,15 +61,40 @@ export function BrandVaultStatus({ vault }: { vault: any }) {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base text-midnight-ink">{vault.name}</h2>
+              <h2 className="text-base text-midnight-ink">{vault.display_name || vault.name}</h2>
               <Tag color="green" label="Đang hoạt động" />
+              {totalVaults > 1 && (
+                <Tag color="blue" label={`${totalVaults} vault`} />
+              )}
             </div>
             <p className="mt-1 text-sm text-app-muted">Tone: {tone}</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => router.push('/onboarding')}>
-          <Edit3 className="h-4 w-4" /> Chỉnh sửa
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {inactiveCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/vaults')}
+            >
+              <Layers className="h-4 w-4" /> Xem {inactiveCount} vault khác
+            </Button>
+          )}
+          <Button
+            variant="white"
+            size="sm"
+            onClick={() => router.push('/vaults')}
+          >
+            Quản lý Brand Vault <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/onboarding')}
+          >
+            <Edit3 className="h-4 w-4" /> Chỉnh sửa
+          </Button>
+        </div>
       </div>
     </Card>
   )

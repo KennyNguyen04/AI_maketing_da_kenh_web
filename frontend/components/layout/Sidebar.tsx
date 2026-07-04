@@ -8,7 +8,7 @@ import { signOut } from '@/features/auth/actions'
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
-  { href: '/onboarding/confirm', icon: Fingerprint, label: 'Brand Vault' },
+  { href: '/vaults', icon: Fingerprint, label: 'Brand Vault' },
   { href: '/dashboard/new', icon: Sparkles, label: 'Tạo nội dung' },
   { href: '/settings', icon: Settings, label: 'Phân phối' },
 ]
