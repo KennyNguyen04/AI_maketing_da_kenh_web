@@ -98,9 +98,9 @@ export function NewJobForm() {
           // any active vault, then any vault with a voice_profile, then the
           // most recent vault. This ensures we always show a selection rather
           // than asking the user to recreate voice profile they already saved.
-          const activeWithVoice = data.find((v: any) => v.is_active && v.voice_profile)
-          const anyActive = data.find((v: any) => v.is_active)
-          const anyWithVoice = data.find((v: any) => v.voice_profile)
+          const activeWithVoice = data.find((v) => v.is_active && v.voice_profile)
+          const anyActive = data.find((v) => v.is_active)
+          const anyWithVoice = data.find((v) => v.voice_profile)
           const selected = activeWithVoice || anyActive || anyWithVoice || data[0]
           setVaults(data)
           setVaultId(selected.id)

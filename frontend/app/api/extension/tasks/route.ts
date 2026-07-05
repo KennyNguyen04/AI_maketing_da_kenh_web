@@ -50,16 +50,15 @@ export async function GET(request: Request) {
       .eq('user_id', userId)
       .single()
 
-    const limits =
-      settings?.rate_limits && Object.keys(settings.rate_limits).length > 0
-        ? settings.rate_limits
-        : DEFAULT_RATE_LIMITS
+    const limits = (settings?.rate_limits && Object.keys(settings.rate_limits).length > 0
+      ? settings.rate_limits
+      : DEFAULT_RATE_LIMITS) as Record<string, { perDay?: number; perHour?: number; minIntervalS?: number; enabled?: boolean }>
 
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
 
     for (const task of candidates) {
-      const channelLimit = (limits as Record<string, any>)?.[task.channel]
+      const channelLimit = limits?.[task.channel]
       if (!channelLimit || channelLimit.enabled === false) {
         // No limit configured or user disabled this channel → return as-is.
         return NextResponse.json({ tasks: [task] })

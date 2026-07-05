@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Tag } from '@/components/ui/Tag'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface VaultSummary {
   id: string
   name: string
   display_name?: string | null
   is_active: boolean
-  voice_profile?: any
+  voice_profile?: unknown
   source_type?: string | null
   created_at: string
 }
