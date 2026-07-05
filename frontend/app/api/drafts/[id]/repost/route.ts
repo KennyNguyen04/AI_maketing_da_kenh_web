@@ -31,7 +31,7 @@ export async function POST(
 
     const { data: draft, error: draftErr } = await supabase
       .from('drafts')
-      .select('id, content, channel')
+      .select('id, content, channel, publish_status')
       .eq('id', draftId)
       .eq('user_id', user.id)
       .single()
