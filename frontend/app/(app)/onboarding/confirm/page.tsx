@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Toast } from '@/components/ui/Toast'
+import { Loading } from '@/components/ui/Loading'
 
 const CONFIRM_POLL_INTERVAL_MS = 2000
 const CONFIRM_MAX_POLL_ATTEMPTS = 150 // ~5 minutes
@@ -210,10 +211,7 @@ export default function OnboardingConfirmPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-[760px]">
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="mt-4 text-sm text-app-muted">Đang tải Brand Vault...</p>
-        </div>
+        <Loading size="lg" label="Đang tải Brand Vault..." fullScreen={false} />
       </div>
     )
   }
@@ -224,14 +222,11 @@ export default function OnboardingConfirmPage() {
         <div className="mb-10">
           <p className="text-sm font-medium text-sky-blue">Step 2 of 2 - Xác nhận Brand Vault</p>
           <div className="mt-3 h-1 rounded-full bg-muted-stone">
-            <div className="h-1 w-3/4 rounded-full bg-sky-blue" />
+            <div className="bg-sky-blue h-1 w-3/4 rounded-full" />
           </div>
         </div>
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="mx-auto mb-8 h-16 w-16 rounded-full border-4 border-muted-stone border-t-sky-blue [animation:spin_.8s_linear_infinite]" />
-          <h2 className="text-[28px] text-midnight-ink">AI đang phân tích giọng văn...</h2>
-          <p className="mt-3 text-sm text-app-muted">Đang xây Brand Vault từ nội dung của bạn. Vui lòng đợi trong giây lát.</p>
-        </div>
+        <Loading size="lg" label="AI đang phân tích giọng văn..." />
+        <p className="mt-3 text-center text-sm text-app-muted">Đang xây Brand Vault từ nội dung của bạn. Vui lòng đợi trong giây lát.</p>
       </div>
     )
   }

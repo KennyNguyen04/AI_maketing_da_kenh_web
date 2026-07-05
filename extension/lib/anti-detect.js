@@ -39,18 +39,60 @@
   }
 
   /**
-   * Type text into an input/textarea char-by-char with variable speed.
-   * Dispatches input event so React-controlled fields pick up the value.
-   * @param {HTMLInputElement|HTMLTextAreaElement} element
+   * Type text into an input/textarea or contenteditable element char-by-char.
+   * Tries multiple strategies in order so React/Lexical editors (FB, Threads)
+   * pick up the change as if a human typed it:
+   *   1) document.execCommand('insertText') — bypasses React's synthetic event
+   *      system by inserting text at the caret in the document selection.
+   *   2) Fallback: direct .value update + input event (works for plain inputs
+   *      but is unreliable on React-controlled fields — kept as last resort).
+   *
+   * @param {HTMLInputElement|HTMLTextAreaElement|HTMLElement} element
    * @param {string} text
    * @param {number} [perCharMs=80]
    */
   async function humanType(element, text, perCharMs) {
     var baseMs = (typeof perCharMs === 'number') ? perCharMs : 80;
-    if (!element) return;
+    if (!element || !text) return;
+
+    // Focus first — execCommand('insertText') requires the element to be focused
+    // and (for contenteditable) the cursor placed in the document.
+    try { element.focus(); } catch (_) { /* ignore */ }
+
+    var isContentEditable = element.isContentEditable ||
+      (element.getAttribute && element.getAttribute('contenteditable') === 'true');
+
     for (var i = 0; i < text.length; i++) {
-      element.value = (element.value || '') + text[i];
-      element.dispatchEvent(new Event('input', { bubbles: true }));
+      var ch = text[i];
+
+      if (isContentEditable) {
+        // Lexical/Draft editors track selection via document.getSelection().
+        // Restoring cursor inside the editor before insertText is critical.
+        var sel = window.getSelection();
+        if (sel && sel.rangeCount === 0) {
+          var range = document.createRange();
+          range.selectNodeContents(element);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        try {
+          // Modern Chromium supports insertText on contenteditable elements.
+          var ok = document.execCommand('insertText', false, ch);
+          if (ok) {
+            await sleep(baseMs + Math.random() * baseMs * 0.5);
+            continue;
+          }
+        } catch (_) { /* fall through to manual assignment */ }
+      }
+
+      // Fallback for plain <input>/<textarea>: direct value + input event.
+      // NOTE: React ignores this; only useful for non-React pages.
+      try {
+        element.value = (element.value || '') + ch;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch (_) { /* element may not be writable */ }
+
       await sleep(baseMs + Math.random() * baseMs * 0.5);
     }
   }

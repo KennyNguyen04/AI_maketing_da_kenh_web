@@ -86,7 +86,7 @@ export function APITokenCard() {
       <Card className="overflow-hidden">
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pure-canvas/20">
               <Key className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -107,11 +107,11 @@ export function APITokenCard() {
               Đang tải token...
             </div>
           ) : error ? (
-            <div className="rounded-card bg-red-50 border border-red-200 p-3">
-              <p className="text-xs text-red-700">{error}</p>
+            <div className="rounded-card bg-vibrant-orange/5 border border-vibrant-orange/20 p-3">
+              <p className="text-xs text-vibrant-orange">{error}</p>
               <button
                 onClick={loadExistingToken}
-                className="mt-2 text-xs font-medium text-red-700 underline"
+                className="mt-2 text-xs font-medium text-vibrant-orange underline"
               >
                 Thử lại
               </button>
@@ -119,11 +119,11 @@ export function APITokenCard() {
           ) : token ? (
             <div className="space-y-4">
               {isNew && (
-                <div className="rounded-card bg-amber-50 border border-amber-200 p-3">
-                  <p className="text-xs font-semibold text-amber-800">
+                <div className="rounded-card bg-sunset-orange/10 border border-sunset-orange/25 p-3">
+                  <p className="text-xs font-semibold text-sunset-orange">
                     Token mới vừa được tạo
                   </p>
-                  <p className="mt-1 text-xs text-amber-700">
+                  <p className="mt-1 text-xs text-sunset-orange/80">
                     Token cũ (nếu có) đã bị vô hiệu hóa. Bạn có thể xem lại token này bất cứ lúc nào trên trang Settings.
                   </p>
                 </div>
@@ -155,7 +155,7 @@ export function APITokenCard() {
                 >
                   {copied ? (
                     <>
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <CheckCircle2 className="h-4 w-4 text-forest-fern" />
                       Đã copy!
                     </>
                   ) : (
@@ -170,13 +170,13 @@ export function APITokenCard() {
                 </span>
               </div>
 
-              <div className="rounded-card bg-blue-50 p-3">
-                <p className="text-xs font-medium text-blue-800">Hướng dẫn:</p>
-                <ol className="mt-1.5 space-y-0.5 text-xs text-blue-700">
+              <div className="rounded-card bg-sky-blue/10 p-3">
+                <p className="text-xs font-medium text-sky-blue">Hướng dẫn:</p>
+                <ol className="mt-1.5 space-y-0.5 text-xs text-sky-blue/80">
                   <li>1. Copy token bên trên</li>
                   <li>2. Mở Chrome Extension popup</li>
-                  <li>3. Dán token vào ô "API Token"</li>
-                  <li>4. Bấm "Lưu &amp; Kết nối"</li>
+                  <li>3. Dán token vào ô &ldquo;API Token&rdquo;</li>
+                  <li>4. Bấm &ldquo;Lưu &amp; Kết nối&rdquo;</li>
                 </ol>
               </div>
 
@@ -185,7 +185,7 @@ export function APITokenCard() {
                   onClick={generateToken}
                   disabled={loading}
                   variant="outline"
-                  className="w-full sm:w-auto border-green-600 text-green-700 hover:bg-green-50"
+                  className="w-full sm:w-auto border-forest-fern/40 text-forest-fern hover:bg-forest-fern/10"
                 >
                   {loading ? (
                     <>
@@ -199,7 +199,7 @@ export function APITokenCard() {
                     </>
                   )}
                 </Button>
-                <p className="mt-2 text-xs text-amber-600">
+                <p className="mt-2 text-xs text-sunset-orange">
                   Tạo lại sẽ vô hiệu hóa token hiện tại. Extension đang dùng token cũ sẽ ngừng hoạt động.
                 </p>
               </div>

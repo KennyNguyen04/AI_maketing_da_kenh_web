@@ -19,12 +19,12 @@ export function Toggle({ checked, onChange, label, disabled = false }: TogglePro
         aria-checked={checked}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-          checked ? 'bg-blue-600' : 'bg-gray-200'
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+          checked ? 'bg-sky-blue' : 'bg-muted-stone'
         }`}
       >
         <motion.span
-          className="inline-block h-5 w-5 transform rounded-full bg-white shadow-sm"
+          className="inline-block h-5 w-5 transform rounded-full bg-pure-canvas shadow-sm"
           initial={false}
           animate={{
             x: checked ? 22 : 2,

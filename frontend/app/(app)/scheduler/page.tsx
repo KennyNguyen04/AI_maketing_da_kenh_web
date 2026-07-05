@@ -7,6 +7,10 @@ import { CalendarDays, List, Clock, Plus, BarChart3 } from 'lucide-react'
 import { SchedulerCalendar, QueueList, TimeSlotPicker } from '@/features/scheduler'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Loading } from '@/components/ui/Loading'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Counter } from '@/components/ui/Counter'
+import { Modal } from '@/components/ui/Modal'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
@@ -47,6 +51,7 @@ export default function SchedulerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [selectedDraft, setSelectedDraft] = useState<ScheduledDraft | null>(null)
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -165,7 +170,7 @@ export default function SchedulerPage() {
         <div>
           <p className="text-sm font-medium text-app-muted">Quản lý lịch đăng</p>
           <h1 className="mt-1 text-2xl text-midnight-ink md:text-3xl">Lịch đăng bài</h1>
-          <p className="mt-2 text-sm text-dark-charcoal">
+          <p className="mt-2 text-sm text-app-muted">
             Xem và quản lý các bài đăng đã lên lịch
           </p>
         </div>
@@ -187,12 +192,12 @@ export default function SchedulerPage() {
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <CalendarDays className="h-5 w-5 text-primary" />
+            <div className="rounded-nav bg-sky-blue/10 p-2">
+              <CalendarDays className="h-5 w-5 text-sky-blue" />
             </div>
             <div>
               <p className="text-2xl font-semibold text-midnight-ink">
-                {pagination.total}
+                <Counter value={pagination.total} />
               </p>
               <p className="text-sm text-app-muted">Bài đã lên lịch</p>
             </div>
@@ -200,12 +205,14 @@ export default function SchedulerPage() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Clock className="h-5 w-5 text-green-600" />
+            <div className="rounded-nav bg-forest-fern/10 p-2">
+              <Clock className="h-5 w-5 text-forest-fern" />
             </div>
             <div>
               <p className="text-2xl font-semibold text-midnight-ink">
-                {scheduledDrafts.filter((d) => new Date(d.scheduled_for) > new Date()).length}
+                <Counter
+                  value={scheduledDrafts.filter((d) => new Date(d.scheduled_for) > new Date()).length}
+                />
               </p>
               <p className="text-sm text-app-muted">Sắp tới</p>
             </div>
@@ -213,14 +220,14 @@ export default function SchedulerPage() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <List className="h-5 w-5 text-orange-600" />
+            <div className="rounded-nav bg-sunset-orange/10 p-2">
+              <List className="h-5 w-5 text-sunset-orange" />
             </div>
             <div>
               <p className="text-2xl font-semibold text-midnight-ink">
-                {pagination.totalPages}
+                <Counter value={scheduledDrafts.length} />
               </p>
-              <p className="text-sm text-app-muted">Trang</p>
+              <p className="text-sm text-app-muted">Đang hiển thị</p>
             </div>
           </div>
         </Card>
@@ -228,27 +235,27 @@ export default function SchedulerPage() {
 
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 p-1 bg-light-surface rounded-lg">
+        <div className="flex items-center gap-2 p-1 bg-app-bg rounded-card">
           <button
             onClick={() => setViewMode('calendar')}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors',
-              viewMode === 'calendar'
-                ? 'bg-white text-midnight-ink shadow-sm'
-                : 'text-dark-charcoal/60 hover:text-midnight-ink'
-            )}
+              className={cn(
+                'flex items-center gap-2 rounded-nav px-4 py-2 text-sm font-medium transition-colors',
+                viewMode === 'calendar'
+                  ? 'bg-pure-canvas text-midnight-ink shadow-sm'
+                  : 'text-app-muted hover:text-midnight-ink'
+              )}
           >
             <CalendarDays className="h-4 w-4" />
             Lịch
           </button>
           <button
             onClick={() => setViewMode('queue')}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors',
-              viewMode === 'queue'
-                ? 'bg-white text-midnight-ink shadow-sm'
-                : 'text-dark-charcoal/60 hover:text-midnight-ink'
-            )}
+              className={cn(
+                'flex items-center gap-2 rounded-nav px-4 py-2 text-sm font-medium transition-colors',
+                viewMode === 'queue'
+                  ? 'bg-pure-canvas text-midnight-ink shadow-sm'
+                  : 'text-app-muted hover:text-midnight-ink'
+              )}
           >
             <List className="h-4 w-4" />
             Danh sách
@@ -262,7 +269,7 @@ export default function SchedulerPage() {
               setStatus(e.target.value as ScheduleStatus)
               setPagination((prev) => ({ ...prev, page: 1 }))
             }}
-            className="p-2 text-sm border border-light-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="rounded-card border border-app-line bg-pure-canvas p-2 text-sm focus:border-sky-blue focus:outline-none focus:ring-2 focus:ring-sky-blue/20"
           >
             <option value="scheduled">Sắp tới</option>
             <option value="past">Đã quá hạn</option>
@@ -273,9 +280,7 @@ export default function SchedulerPage() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-        </div>
+        <Loading size="lg" label="Đang tải dữ liệu..." />
       ) : viewMode === 'calendar' ? (
         <SchedulerCalendar
           posts={formatPostsForCalendar()}
@@ -284,7 +289,7 @@ export default function SchedulerPage() {
       ) : (
         <QueueList
           items={formatPostsForCalendar()}
-          onCancel={handleCancelSchedule}
+          onCancelRequest={(id) => setConfirmCancelId(id)}
         />
       )}
 
@@ -315,21 +320,16 @@ export default function SchedulerPage() {
 
       {/* Empty State */}
       {!isLoading && scheduledDrafts.length === 0 && (
-        <div className="text-center py-12">
-          <CalendarDays className="h-12 w-12 mx-auto text-dark-charcoal/30 mb-4" />
-          <h3 className="text-lg font-medium text-midnight-ink mb-2">
-            Chưa có bài đăng nào được lên lịch
-          </h3>
-          <p className="text-sm text-dark-charcoal/60 mb-4">
-            Tạo nội dung mới và đặt lịch đăng bài
-          </p>
-          <Link href="/dashboard/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Tạo nội dung mới
-            </Button>
-          </Link>
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="Chưa có bài đăng nào được lên lịch"
+          description="Tạo nội dung mới và đặt lịch đăng bài"
+          action={{
+            label: 'Tạo nội dung mới',
+            onClick: () => (window.location.href = '/dashboard/new'),
+            icon: Plus,
+          }}
+        />
       )}
 
       {/* Time Slot Picker Modal */}
@@ -344,6 +344,22 @@ export default function SchedulerPage() {
         onSchedule={async (draftId, dateTime) => {
           await handleSchedule(draftId, dateTime)
         }}
+      />
+
+      {/* Confirm Cancel Modal */}
+      <Modal
+        isOpen={confirmCancelId !== null}
+        title="Hủy lịch đăng bài này?"
+        body="Bản nháp sẽ không bị xóa — bạn có thể lên lịch lại bất cứ lúc nào."
+        confirmLabel="Hủy lịch"
+        confirmVariant="danger"
+        onConfirm={async () => {
+          if (confirmCancelId) {
+            await handleCancelSchedule(confirmCancelId)
+            setConfirmCancelId(null)
+          }
+        }}
+        onClose={() => setConfirmCancelId(null)}
       />
     </div>
   )

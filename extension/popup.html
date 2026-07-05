@@ -87,6 +87,66 @@
 
     /* Hidden */
     .hidden { display: none !important; }
+
+    /* Settings tabs (Rate limit / Re-post / Preview tabs share these styles) */
+    .tab-row { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; }
+    .tab-btn {
+      flex: 1; padding: 8px 4px; border: none; background: transparent;
+      font-size: 11px; font-weight: 600; color: #6b7280; cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active { color: #6366f1; border-bottom-color: #6366f1; }
+
+    /* Rate limit editor */
+    .rate-limit-item {
+      background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 8px 10px; margin-bottom: 6px; font-size: 12px;
+    }
+    .rate-limit-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .rate-limit-channel { font-weight: 600; color: #111827; }
+    .rate-limit-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .rate-limit-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 4px; }
+    .rate-limit-field label { font-size: 10px; color: #6b7280; margin-bottom: 2px; }
+    .rate-limit-field input { width: 100%; padding: 4px 6px; font-size: 12px; }
+
+    /* Preview section */
+    #preview-section {
+      background: #fef3c7; border: 1px solid #fcd34d;
+    }
+    .preview-meta { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+    .countdown { font-weight: 700; color: #d97706; }
+    .preview-content {
+      background: white; border-radius: 6px; padding: 10px;
+      font-size: 13px; line-height: 1.5; max-height: 200px;
+      overflow-y: auto; margin-bottom: 8px; color: #111827;
+    }
+    .preview-images { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+    .preview-images img {
+      width: 56px; height: 56px; object-fit: cover;
+      border-radius: 4px; border: 1px solid #e5e7eb;
+    }
+    .preview-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .btn-confirm { background: #059669; color: white; }
+    .btn-cancel { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+
+    /* Re-post section */
+    .repost-item {
+      background: white; border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 8px; margin-bottom: 6px; font-size: 12px;
+    }
+    .repost-content {
+      color: #111827; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3;
+      -webkit-box-orient: vertical; overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .repost-meta { color: #6b7280; font-size: 10px; margin-bottom: 6px; }
+    .repost-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+    .btn-channel-mini {
+      padding: 4px 8px; font-size: 11px; border: 1px solid #d1d5db;
+      background: white; border-radius: 4px; cursor: pointer; font-weight: 500;
+    }
+    .btn-channel-mini:hover { background: #f3f4f6; }
   </style>
 </head>
 <body>
@@ -147,6 +207,62 @@
   <!-- Footer -->
   <div style="text-align:center;font-size:11px;color:#9ca3af;padding:12px;line-height:1.6;">
     Amplify Auto Poster · Auto Post AI Content
+  </div>
+
+  <!-- Preview Section (shown when pendingPreview exists) -->
+  <div class="section" id="preview-section" style="display:none;">
+    <div class="section-title">👁️ Preview bài sắp đăng</div>
+    <div class="preview-meta">
+      <span id="preview-channel">📘 Facebook</span>
+      <span class="countdown" id="preview-countdown">⏱️ 10s</span>
+    </div>
+    <div class="preview-content" id="preview-content"></div>
+    <div class="preview-images" id="preview-images"></div>
+    <div class="preview-actions">
+      <button class="btn btn-confirm" id="confirmPostBtn">✅ Đăng ngay</button>
+      <button class="btn btn-cancel" id="cancelPostBtn">❌ Hủy</button>
+    </div>
+  </div>
+
+  <!-- Settings Tabs (Rate limit / Re-post / Preview) -->
+  <div class="section">
+    <div class="section-title">⚙️ Cài đặt Extension</div>
+    <div class="tab-row">
+      <button class="tab-btn active" data-tab="limits">⚙️ Giới hạn</button>
+      <button class="tab-btn" data-tab="repost">🔄 Đăng lại</button>
+      <button class="tab-btn" data-tab="preview">👁️ Preview</button>
+    </div>
+
+    <!-- Tab: Rate Limits -->
+    <div class="tab-panel" id="tab-limits" data-tab-panel="limits">
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
+        Bật/tắt từng kênh và chỉnh giới hạn để tránh bị khóa tài khoản.
+      </div>
+      <div id="rate-limit-list"></div>
+      <button class="btn btn-primary" id="saveLimitsBtn" style="margin-top:6px;">💾 Lưu cài đặt</button>
+    </div>
+
+    <!-- Tab: Re-post -->
+    <div class="tab-panel" id="tab-repost" data-tab-panel="repost" style="display:none;">
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
+        Bấm nút kênh bên dưới để đăng lại bài cũ.
+      </div>
+      <div id="recent-drafts-list" style="max-height:280px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Tab: Preview Settings -->
+    <div class="tab-panel" id="tab-preview" data-tab-panel="preview" style="display:none;">
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
+        Bật preview để xem lại bài trước khi đăng thật.
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+        <input type="checkbox" id="autoPreviewToggle">
+        <span>👁️ Hiện preview trước khi đăng</span>
+      </label>
+      <label style="margin-top:8px;">Đếm ngược (giây, 0 = tắt):</label>
+      <input type="number" id="previewDelayInput" min="0" max="300" step="1">
+      <button class="btn btn-primary" id="savePreviewBtn" style="margin-top:6px;">💾 Lưu preview</button>
+    </div>
   </div>
 
   <script src="popup.js"></script>

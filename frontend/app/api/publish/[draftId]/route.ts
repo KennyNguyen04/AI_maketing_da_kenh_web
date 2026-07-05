@@ -1,8 +1,9 @@
+// NOTE: getValidAccessToken + rateLimiter imports removed — direct API
+// publishing is disabled. The commented-out block below references them
+// if you ever re-enable.
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getValidAccessToken } from '@/lib/social/token-manager'
-import { rateLimiter } from '@/lib/social/rate-limiter'
-import { assertUuid, validationErrorResponse, ApiValidationError } from '@/lib/validation/api'
+import { assertUuid, validationErrorResponse } from '@/lib/validation/api'
 import type { SocialProvider } from '@/lib/types'
 
 const VALID_PROVIDERS: SocialProvider[] = ['x', 'facebook']
@@ -23,6 +24,22 @@ export async function POST(
     const draftId = assertUuid(rawDraftId, 'draft_id')
     const body = await request.json()
     const provider = body.provider as SocialProvider
+
+    // Direct API publishing from the webapp is disabled by design.
+    // Amplify never posts on the user's behalf via X/Facebook APIs.
+    // Only the Copy+Open handoff flow (mode='fallback') is supported here.
+    // The extension may still post via browser automation, scheduled from
+    // /api/schedule/[draftId] which writes to extension_tasks.
+    if (body.mode !== 'fallback') {
+      return NextResponse.json(
+        {
+          error:
+            'Direct publishing is disabled. Use Copy+Open to paste manually, or schedule via the Extension.',
+          code: 'DIRECT_PUBLISH_DISABLED',
+        },
+        { status: 410 },
+      )
+    }
 
     if (!VALID_PROVIDERS.includes(provider)) {
       return NextResponse.json({ error: 'Invalid publish provider' }, { status: 400 })
@@ -77,7 +94,9 @@ export async function POST(
       })
     }
 
-    const { data: account, error: accountError } = await supabase
+    // [DISABLED] Direct publish to X/FB removed — Amplify never posts via APIs.
+    // Code preserved below for potential re-enable. Returns 410 at line ~28.
+    /* const { data: account, error: accountError } = await supabase
       .from('social_targets')
       .select('*')
       .eq('user_id', user.id)
@@ -102,10 +121,8 @@ export async function POST(
       return NextResponse.json({ error: `${provider} account is not connected` }, { status: 404 })
     }
 
-    // Get valid access token (refresh if needed)
     const { accessToken } = await getValidAccessToken(selectedAccount)
 
-    // Check rate limit before publishing
     const rateCheck = rateLimiter.canPost(user.id, provider)
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -118,8 +135,6 @@ export async function POST(
       )
     }
 
-    // Atomic claim via DB function — eliminates race condition between
-    // "check no in-flight publish" and "insert new attempt"
     const { data: attemptId, error: attemptError } = await supabase.rpc(
       'claim_publish_attempt',
       {
@@ -167,7 +182,6 @@ export async function POST(
         .update({ status: 'published', external_post_id: result.data.id, external_post_url: externalUrl })
         .eq('id', attempt.id)
 
-      // Record successful post for rate limiting
       rateLimiter.recordPost(user.id, provider)
 
       return NextResponse.json({ status: 'published', externalPostId: result.data.id, externalPostUrl: externalUrl })
@@ -195,10 +209,14 @@ export async function POST(
       .update({ status: 'published', external_post_id: facebookResult.id, external_post_url: externalUrl })
       .eq('id', attempt.id)
 
-    // Record successful post for rate limiting
     rateLimiter.recordPost(user.id, provider)
 
     return NextResponse.json({ status: 'published', externalPostId: facebookResult.id, externalPostUrl: externalUrl })
+    */
+    return NextResponse.json(
+      { error: 'Direct publishing is disabled.' },
+      { status: 410 },
+    )
   } catch (error) {
     const validationResponse = validationErrorResponse(error)
     if (validationResponse) return validationResponse

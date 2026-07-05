@@ -257,7 +257,7 @@ export function NewJobForm() {
           <p className="text-sm font-medium text-midnight-ink">Kênh cần tạo</p>
           <p className="mt-1 text-xs text-app-muted">Có thể chọn nhiều kênh trong cùng một lần tạo.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div role="group" aria-label="Chọn kênh phân phối" className="grid gap-3 sm:grid-cols-2">
           {channelOptions.map((channel) => {
             const Icon = channel.icon
             const selected = channels.includes(channel.id)
@@ -265,18 +265,20 @@ export function NewJobForm() {
               <button
                 key={channel.id}
                 type="button"
+                role="checkbox"
+                aria-checked={selected}
                 onClick={() => toggleChannel(channel.id)}
                 className={clsx(
-                  'relative flex items-start gap-3 rounded-card border bg-pure-canvas p-4 text-left transition hover:border-sky-blue/40 hover:bg-hint-of-blue/20',
+                  'relative flex min-h-[60px] items-start gap-3 rounded-card border bg-pure-canvas p-4 text-left transition hover:border-sky-blue/40 hover:bg-hint-of-blue/20',
                   selected ? 'border-sky-blue bg-hint-of-blue/25' : 'border-app-line',
                 )}
               >
-                <Icon className="mt-0.5 h-5 w-5 text-sky-blue" />
+                <Icon className="mt-0.5 h-5 w-5 text-sky-blue" aria-hidden="true" />
                 <span>
                   <span className="block text-sm font-medium text-midnight-ink">{channel.label}</span>
                   <span className="mt-1 block text-xs text-app-muted">{channel.description}</span>
                 </span>
-                {selected ? <Check className="absolute right-3 top-3 h-4 w-4 text-sky-blue" /> : null}
+                {selected ? <Check className="absolute right-3 top-3 h-4 w-4 text-sky-blue" aria-hidden="true" /> : null}
               </button>
             )
           })}

@@ -98,6 +98,13 @@ window.amplify_injected_threads = true;
     return null;
   }
 
+  async function humanTypeText(editor, text) {
+    if (!editor || !text) return;
+    editor.focus();
+    await sleep(200);
+    await AD.humanType(editor, text, 60);
+  }
+
   // ══ MAIN FLOW ══
   try {
     addLog('Khởi động Auto Poster - Threads...');
@@ -117,17 +124,9 @@ window.amplify_injected_threads = true;
       images = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch (e) {}
 
-  async function humanTypeText(text) {
-    const chars = text.split('');
-    for (let i = 0; i < chars.length; i++) {
-      const delay = 30 + Math.floor(Math.random() * 90);
-      await sleep(delay);
-    }
-  }
-
-  // Require real images
-  if (images.length === 0) {
-    throw new Error("Bài không có ảnh. Vui lòng thêm ảnh trước khi đăng.");
+    // Require real images
+    if (images.length === 0) {
+      throw new Error("Bài không có ảnh. Vui lòng thêm ảnh trước khi đăng.");
     }
 
     addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
@@ -223,7 +222,7 @@ window.amplify_injected_threads = true;
     editor.focus();
     await sleep(500);
     const content = post.content || post.post_content || '';
-    await humanTypeText(content);
+    await humanTypeText(editor, content);
     addLog(`✅ Đã nạp xong nội dung.`);
 
     await sleep(2000);

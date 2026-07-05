@@ -15,15 +15,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ta
 
     const { status, error_message, platform, post_url } = await request.json()
 
-    if (!status || !['completed', 'failed', 'pending'].includes(status)) {
+    // Allowed: pending/processing/completed/failed. 'cancelled' has its own endpoint
+    // (POST /api/extension/cancel) so users can supply a reason and audit trail.
+    const ALLOWED_STATUSES = ['completed', 'failed', 'pending', 'processing'] as const
+    if (!status || !(ALLOWED_STATUSES as readonly string[]).includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
     const updates: Record<string, unknown> = { status }
     if (status === 'completed') {
       updates.completed_at = new Date().toISOString()
-      if (platform) updates.channel = platform
-      if (post_url) updates.target_id = post_url
+      // Do NOT overwrite channel/target_id here — those were assigned by the
+      // schedule route and may not match the platform's actual post URL.
+      // post_url is logged for debugging only; the audit trail lives in publish_attempts.
+      if (post_url) console.log(`[task ${taskId}] published at ${post_url}`)
     }
     if (error_message) updates.error_message = error_message
 

@@ -44,13 +44,13 @@ export function JobCard({ job }: { job: any }) {
       <StatusBadge status={job.status} />
       <div className="flex justify-start md:justify-end">
         {job.status === 'done' ? (
-          <Button variant="ghost" size="sm" onClick={() => router.push(`/review/${job.id}`)}>
-            <Eye className="h-4 w-4" /> Xem
+          <Button variant="ghost" size="sm" onClick={() => router.push(`/review/${job.id}`)} aria-label="Xem chi tiết job">
+            <Eye className="h-4 w-4" aria-hidden="true" /> Xem
           </Button>
         ) : null}
         {job.status === 'failed' ? (
-          <Button variant="danger" size="sm" onClick={() => router.push(`/review/${job.id}`)}>
-            <RotateCcw className="h-4 w-4" /> Xử lý
+          <Button variant="danger" size="sm" onClick={() => router.push(`/review/${job.id}`)} aria-label="Xử lý lỗi job">
+            <RotateCcw className="h-4 w-4" aria-hidden="true" /> Xử lý
           </Button>
         ) : null}
         {job.status === 'processing' ? <span className="text-xs font-medium text-sky-blue">Đang xử lý</span> : null}

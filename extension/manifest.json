@@ -38,7 +38,10 @@
         "https://www.instagram.com/*",
         "https://x.com/*",
         "https://twitter.com/*",
-        "https://www.threads.net/*"
+        "https://www.threads.net/*",
+        "http://localhost:3000/*",
+        "http://localhost:3001/*",
+        "https://amplify-eight-drab.vercel.app/*"
       ],
       "run_at": "document_start"
     }

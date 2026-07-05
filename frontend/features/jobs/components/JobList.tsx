@@ -1,11 +1,16 @@
 'use client'
 
 import { Card } from '@/components/ui/Card'
-import { EmptyState } from './EmptyState'
+import { JobsEmptyState } from './EmptyState'
 import { JobCard } from './JobCard'
 
+interface Job {
+  id: string
+  [key: string]: unknown
+}
+
 interface JobListProps {
-  jobs: any[]
+  jobs: Job[]
   loading?: boolean
 }
 
@@ -13,13 +18,13 @@ export function JobList({ jobs, loading = false }: JobListProps) {
   if (loading) {
     return (
       <Card className="overflow-hidden p-0">
-        <div className="space-y-0 divide-y divide-app-line">
+        <div className="divide-y divide-app-line">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="flex animate-pulse items-center gap-4 px-4 py-4">
-              <div className="h-4 w-1/2 rounded bg-light-gray" />
-              <div className="hidden h-4 w-24 rounded bg-light-gray sm:block" />
-              <div className="hidden h-4 w-20 rounded bg-light-gray md:block" />
-              <div className="ml-auto h-6 w-16 rounded-full bg-light-gray" />
+              <div className="bg-muted-stone h-4 w-1/2 rounded" />
+              <div className="hidden bg-muted-stone h-4 w-24 rounded sm:block" />
+              <div className="hidden bg-muted-stone h-4 w-20 rounded md:block" />
+              <div className="bg-muted-stone ml-auto h-6 w-16 rounded-full" />
             </div>
           ))}
         </div>
@@ -28,7 +33,7 @@ export function JobList({ jobs, loading = false }: JobListProps) {
   }
 
   if (!jobs || jobs.length === 0) {
-    return <EmptyState />
+    return <JobsEmptyState />
   }
 
   return (

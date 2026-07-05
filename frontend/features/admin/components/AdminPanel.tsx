@@ -160,7 +160,7 @@ export function AdminPanel() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-card bg-green-50 p-2 text-green-600"><Activity className="h-5 w-5" /></div>
+                <div className="rounded-card bg-forest-fern/10 p-2 text-forest-fern"><Activity className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm text-app-muted">Tỷ lệ thành công</p>
                   <p className="mt-1 text-2xl font-semibold text-midnight-ink">{stats.jobs.successRate}%</p>
@@ -178,7 +178,7 @@ export function AdminPanel() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-card bg-orange-50 p-2 text-orange-600"><Shield className="h-5 w-5" /></div>
+                <div className="rounded-card bg-sunset-orange/10 p-2 text-sunset-orange"><Shield className="h-5 w-5" /></div>
                 <div>
                   <p className="text-sm text-app-muted">Brand Vaults</p>
                   <p className="mt-1 text-2xl font-semibold text-midnight-ink">{stats.vaults.total}</p>

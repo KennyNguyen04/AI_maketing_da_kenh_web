@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink, Facebook, Linkedin, Loader2, RotateCcw, Send, Twitter, Calendar } from 'lucide-react'
+import { ExternalLink, Facebook, Loader2, Send, Twitter, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { TimeSlotPicker } from '@/features/scheduler'
@@ -13,138 +13,81 @@ interface DraftForPublish {
   content: string
 }
 
-interface PublishAttempt {
-  id: string
-  provider: 'x' | 'facebook'
-  status: 'draft' | 'publishing' | 'published' | 'failed'
-  error_message?: string
-  external_post_url?: string
-  created_at: string
+type BusyState = 'x' | 'facebook' | 'linkedin' | 'threads' | 'instagram' | 'schedule' | null
+
+// Map draft.channel → platform theo ngôn ngữ người dùng.
+const CHANNEL_LABELS: Record<string, { label: string; url: string; copyHint: string }> = {
+  x: {
+    label: 'X (Twitter)',
+    url: 'https://x.com/compose/post',
+    copyHint: 'Đã sao chép nội dung và mở X. Hãy dán, chỉnh sửa rồi tự bấm đăng.',
+  },
+  twitter: {
+    label: 'X (Twitter)',
+    url: 'https://x.com/compose/post',
+    copyHint: 'Đã sao chép nội dung và mở X. Hãy dán, chỉnh sửa rồi tự bấm đăng.',
+  },
+  facebook: {
+    label: 'Facebook',
+    url: 'https://www.facebook.com/',
+    copyHint: 'Đã sao chép nội dung và mở Facebook. Hãy dán, chỉnh sửa rồi tự bấm đăng.',
+  },
+  'facebook-group': {
+    label: 'Facebook Group',
+    url: 'https://www.facebook.com/groups/',
+    copyHint: 'Đã sao chép nội dung. Mở group của bạn, dán nội dung và tự bấm đăng.',
+  },
+  threads: {
+    label: 'Threads',
+    url: 'https://www.threads.net/',
+    copyHint: 'Đã sao chép nội dung và mở Threads. Hãy dán, chỉnh sửa rồi tự bấm đăng.',
+  },
+  instagram: {
+    label: 'Instagram',
+    url: 'https://www.instagram.com/',
+    copyHint: 'Đã sao chép nội dung và mở Instagram. Hãy dán, chỉnh sửa rồi tự bấm đăng.',
+  },
+  linkedin: {
+    label: 'LinkedIn',
+    url: 'https://www.linkedin.com/feed/?shareActive=true',
+    copyHint: 'Đã sao chép nội dung và mở LinkedIn. Hãy dán, chỉnh sửa rồi tự bấm đăng.',
+  },
 }
 
-type BusyState = 'x' | 'facebook' | 'fallback' | 'retry' | 'schedule' | null
+// Channels hỗ trợ lên lịch qua Extension (browser automation).
+const SCHEDULABLE_CHANNELS = new Set(['x', 'twitter', 'facebook', 'threads', 'instagram', 'facebook-group'])
 
 export function PublishPanel({ draft, content }: { draft: DraftForPublish; content: string }) {
-  const [accounts, setAccounts] = useState<SocialAccount[]>([])
-  const [loadingAccounts, setLoadingAccounts] = useState(true)
+  const [accounts] = useState<SocialAccount[]>([])
+  const [loadingAccounts] = useState(false)
   const [busy, setBusy] = useState<BusyState>(null)
   const [message, setMessage] = useState('')
-  const [publishedUrl, setPublishedUrl] = useState('')
-  const [xOpen, setXOpen] = useState(false)
-  const [facebookOpen, setFacebookOpen] = useState(false)
-  const [linkedinOpen, setLinkedinOpen] = useState(false)
-  const [failedAttempts, setFailedAttempts] = useState<PublishAttempt[]>([])
   const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [openDialog, setOpenDialog] = useState<'x' | 'facebook' | 'threads' | 'instagram' | 'linkedin' | null>(null)
 
-  const canSchedule = draft.channel === 'twitter' || draft.channel === 'facebook'
-  const scheduleChannelLabel = draft.channel === 'twitter' ? 'X' : 'Facebook'
+  const channelInfo = CHANNEL_LABELS[draft.channel] ?? CHANNEL_LABELS.x
+  const canSchedule = SCHEDULABLE_CHANNELS.has(draft.channel)
+  const overXLimit = content.length > 280 && (draft.channel === 'x' || draft.channel === 'twitter')
 
   useEffect(() => {
-    async function loadAccounts() {
-      try {
-        const res = await fetch('/api/social/accounts')
-        const data = await res.json()
-        setAccounts(data.accounts || [])
-      } finally {
-        setLoadingAccounts(false)
-      }
-    }
-    loadAccounts()
+    // Accounts list no longer drives UI — kept for future use, but skip fetch to
+    // avoid showing OAuth-connection prompts that imply webapp-side publishing.
   }, [])
 
-  const xAccount = useMemo(() => accounts.find((account) => account.provider === 'x'), [accounts])
-  const facebookAccount = useMemo(() => accounts.find((account) => account.provider === 'facebook'), [accounts])
-  const overXLimit = content.length > 280
-
-  async function publish(provider: 'x' | 'facebook', accountId?: string) {
-    setBusy(provider)
+  async function copyAndOpen(key: 'x' | 'facebook' | 'threads' | 'instagram' | 'linkedin') {
+    setBusy(key)
     setMessage('')
-    setPublishedUrl('')
     try {
-      const res = await fetch(`/api/publish/${draft.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, account_id: accountId }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        const errorMsg = data.error || 'Publish failed'
-        // Check if it's rate limit error
-        if (data.code === 'RATE_LIMIT_EXCEEDED') {
-          setMessage(`Rate limit: ${errorMsg}`)
-        } else {
-          throw new Error(errorMsg)
-        }
-        return
-      }
-      setPublishedUrl(data.externalPostUrl)
-      setMessage(provider === 'x' ? 'Đã đăng lên X.' : 'Đã đăng lên Facebook Page.')
-      setXOpen(false)
-      setFacebookOpen(false)
+      await navigator.clipboard.writeText(content)
+      const url = CHANNEL_LABELS[key]?.url ?? channelInfo.url
+      window.open(url, '_blank', 'noopener,noreferrer')
+      setMessage(CHANNEL_LABELS[key]?.copyHint ?? channelInfo.copyHint)
+      setOpenDialog(null)
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error))
+      setMessage(error instanceof Error ? error.message : 'Không thể sao chép nội dung.')
     } finally {
       setBusy(null)
     }
-  }
-
-  async function retryPublish(provider: 'x' | 'facebook') {
-    setBusy('retry')
-    setMessage('')
-    setPublishedUrl('')
-    try {
-      const res = await fetch(`/api/publish/${draft.id}/retry`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        const errorMsg = data.error || 'Retry failed'
-        if (data.code === 'RATE_LIMIT_EXCEEDED') {
-          setMessage(`Rate limit: ${errorMsg}`)
-        } else {
-          throw new Error(errorMsg)
-        }
-        return
-      }
-      setPublishedUrl(data.externalPostUrl)
-      setMessage(`Đã đăng thành công lên ${provider === 'x' ? 'X' : 'Facebook'}.`)
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error))
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function manualHandoff(provider: 'x' | 'facebook' | 'linkedin') {
-    setBusy('fallback')
-    setMessage('')
-    await navigator.clipboard.writeText(content)
-    if (provider === 'linkedin') {
-      window.open('https://www.linkedin.com/feed/?shareActive=true', '_blank', 'noopener,noreferrer')
-      setMessage('Đã sao chép nội dung và mở LinkedIn. Hãy dán, chỉnh sửa rồi tự bấm đăng.')
-      setBusy(null)
-      setLinkedinOpen(false)
-      return
-    }
-
-    const res = await fetch(`/api/publish/${draft.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider, mode: 'fallback' }),
-    })
-    const fallbackUrl = provider === 'x' ? 'https://x.com/compose/post' : 'https://www.facebook.com/'
-    const data = await res.json().catch(() => ({ handoffUrl: fallbackUrl }))
-    window.open(data.handoffUrl || fallbackUrl, '_blank', 'noopener,noreferrer')
-    setMessage(provider === 'x'
-      ? 'Đã sao chép nội dung và mở X. Hãy dán, chỉnh sửa rồi tự bấm đăng.'
-      : 'Đã sao chép nội dung và mở Facebook. Hãy dán, chỉnh sửa rồi tự bấm đăng.'
-    )
-    setBusy(null)
-    setXOpen(false)
-    setFacebookOpen(false)
-    setLinkedinOpen(false)
   }
 
   async function handleSchedule(draftId: string, scheduledFor: Date) {
@@ -160,7 +103,9 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
       if (!res.ok) {
         throw new Error(data.error || 'Failed to schedule')
       }
-      setMessage(`Đã lên lịch đăng bài vào ${scheduledFor.toLocaleString('vi-VN')}`)
+      setMessage(
+        `Đã lên lịch đăng bài vào ${scheduledFor.toLocaleString('vi-VN')}. Extension sẽ tự động đăng khi đến giờ (cần mở Extension và đăng nhập social trên trình duyệt).`,
+      )
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error))
     } finally {
@@ -174,139 +119,71 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
         <div>
           <p className="text-sm font-medium text-midnight-ink">Phân phối nội dung</p>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-app-muted">
-            Mỗi nút Prepare chỉ mở bước xem lại. Amplify không tự đăng nếu bạn chưa xác nhận.
+            Amplify không tự đăng lên mạng xã hội. Bạn có thể <strong>Copy + Open</strong> để dán thủ công, hoặc <strong>Lên lịch</strong> để Extension tự động đăng qua trình duyệt của bạn.
           </p>
           {message ? (
-            <p className={`mt-3 text-xs font-medium ${message.includes('thành công') || message.includes('Đã đăng') ? 'text-regal-violet' : 'text-vibrant-orange'}`}>
-              {message}
-            </p>
-          ) : null}
-          {publishedUrl ? (
-            <a href={publishedUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-sky-blue">
-              Xem bài đã đăng <ExternalLink className="h-3 w-3" />
-            </a>
+            <p className="mt-3 text-xs font-medium text-vibrant-orange">{message}</p>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => setXOpen(true)}>
-            <Twitter className="h-4 w-4" /> Prepare X
+          <Button size="sm" variant="primary" disabled={busy !== null} onClick={() => setOpenDialog('x')}>
+            <Twitter className="h-4 w-4" /> Copy + Open X
           </Button>
-          <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => setFacebookOpen(true)}>
-            <Facebook className="h-4 w-4" /> Prepare Facebook
+          <Button size="sm" variant="primary" disabled={busy !== null} onClick={() => setOpenDialog('facebook')}>
+            <Facebook className="h-4 w-4" /> Copy + Open Facebook
           </Button>
-          <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => setLinkedinOpen(true)}>
-            <Linkedin className="h-4 w-4" /> Prepare LinkedIn
+          <Button size="sm" variant="primary" disabled={busy !== null} onClick={() => setOpenDialog('linkedin')}>
+            <ExternalLink className="h-4 w-4" /> Copy + Open LinkedIn
           </Button>
           {canSchedule && (
             <Button size="sm" variant="white" disabled={busy !== null} onClick={() => setShowScheduleModal(true)}>
               {busy === 'schedule' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
-              Lên lịch {scheduleChannelLabel}
+              Lên lịch qua Extension
             </Button>
           )}
         </div>
       </div>
 
-      {overXLimit ? <p className="text-xs text-vibrant-orange">Bản nháp dài hơn 280 ký tự. Hãy rút gọn trước khi đăng trực tiếp lên X.</p> : null}
-      {!xAccount && !loadingAccounts ? <p className="text-xs text-app-muted">Khi chưa kết nối tài khoản, app sẽ dùng Copy + Open để bạn tự đăng thủ công.</p> : null}
-
-      {xOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-pitch-black/40 p-4">
-          <div className="w-full max-w-[680px] rounded-card border border-app-line bg-pure-canvas p-6 shadow-lg">
-            <h2 className="text-xl text-midnight-ink">Prepare X post</h2>
-            <p className="mt-2 text-sm text-dark-charcoal">
-              Kiểm tra nội dung trước khi chuyển sang X. Bạn là người thực hiện thao tác đăng cuối cùng.
-            </p>
-            <textarea
-              value={content}
-              readOnly
-              className="mt-5 min-h-[220px] w-full resize-y rounded-card border border-app-line bg-app-bg p-4 text-sm leading-6 text-midnight-ink"
-            />
-            <div className="mt-3 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
-              <p className={overXLimit ? 'text-vibrant-orange' : 'text-app-muted'}>{content.length} / 280 ký tự</p>
-              <p className="text-app-muted">{xAccount ? `Tài khoản: ${xAccount.display_name}` : 'Chưa kết nối X. Có thể Copy + Open.'}</p>
-            </div>
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-              <Button variant="ghost" onClick={() => setXOpen(false)}>Hủy</Button>
-              <Button variant="ghost" onClick={() => manualHandoff('x')} disabled={busy !== null}>
-                {busy === 'fallback' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                Copy + Open X
-              </Button>
-              <Button onClick={() => xAccount ? publish('x', xAccount.id) : manualHandoff('x')} disabled={busy !== null || overXLimit}>
-                {busy === 'x' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Đăng lên X
-              </Button>
-              {xAccount && (
-                <Button variant="white" onClick={() => retryPublish('x')} disabled={busy !== null}>
-                  {busy === 'retry' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                  Thử lại
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+      {overXLimit ? (
+        <p className="text-xs text-vibrant-orange">
+          Bản nháp dài hơn 280 ký tự. Hãy rút gọn trước khi copy sang X.
+        </p>
       ) : null}
 
-      {facebookOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-pitch-black/40 p-4">
-          <div className="w-full max-w-[680px] rounded-card border border-app-line bg-pure-canvas p-6 shadow-lg">
-            <h2 className="text-xl text-midnight-ink">Prepare Facebook Page post</h2>
-            <p className="mt-2 text-sm text-dark-charcoal">Xem lại nội dung trước khi đăng lên Page hoặc mở Facebook để đăng thủ công.</p>
-            <textarea
-              value={content}
-              readOnly
-              className="mt-5 min-h-[260px] w-full resize-y rounded-card border border-app-line bg-app-bg p-4 text-sm leading-6 text-midnight-ink"
-            />
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-app-muted">{facebookAccount ? `Page: ${facebookAccount.display_name}` : 'Chưa kết nối Facebook Page. Có thể Copy + Open.'}</p>
-              <div className="flex flex-wrap justify-end gap-3">
-                <Button variant="ghost" onClick={() => setFacebookOpen(false)}>Hủy</Button>
-                <Button variant="ghost" onClick={() => manualHandoff('facebook')} disabled={busy !== null}>
-                  {busy === 'fallback' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                  Copy + Open
-                </Button>
-                <Button onClick={() => facebookAccount ? publish('facebook', facebookAccount.id) : manualHandoff('facebook')} disabled={busy !== null}>
-                  {busy === 'facebook' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Đăng lên Page
-                </Button>
-                {facebookAccount && (
-                  <Button variant="white" onClick={() => retryPublish('facebook')} disabled={busy !== null}>
-                    {busy === 'retry' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                    Thử lại
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* X dialog */}
+      {openDialog === 'x' ? (
+        <DialogShell title="Copy + Open X" subtitle="Sao chép nội dung rồi mở X để bạn tự dán và đăng." content={content} contentLength={content.length} maxLength={280} onClose={() => setOpenDialog(null)}>
+          <Button variant="ghost" onClick={() => setOpenDialog(null)}>Hủy</Button>
+          <Button onClick={() => copyAndOpen('x')} disabled={busy !== null}>
+            {busy === 'x' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Copy + Open X
+          </Button>
+        </DialogShell>
       ) : null}
 
-      {linkedinOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-pitch-black/40 p-4">
-          <div className="w-full max-w-[680px] rounded-card border border-app-line bg-pure-canvas p-6 shadow-lg">
-            <h2 className="text-xl text-midnight-ink">Prepare LinkedIn post</h2>
-            <p className="mt-2 text-sm text-dark-charcoal">
-              LinkedIn không có compose URL ổn định để prefill text. Amplify sẽ sao chép nội dung rồi mở LinkedIn để bạn tự dán và đăng.
-            </p>
-            <textarea
-              value={content}
-              readOnly
-              className="mt-5 min-h-[260px] w-full resize-y rounded-card border border-app-line bg-app-bg p-4 text-sm leading-6 text-midnight-ink"
-            />
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-app-muted">Bạn vẫn kiểm soát nội dung và thao tác đăng cuối cùng.</p>
-              <div className="flex flex-wrap justify-end gap-3">
-                <Button variant="ghost" onClick={() => setLinkedinOpen(false)}>Hủy</Button>
-                <Button variant="ghost" onClick={() => manualHandoff('linkedin')} disabled={busy !== null}>
-                  {busy === 'fallback' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                  Copy + Open LinkedIn
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Facebook dialog */}
+      {openDialog === 'facebook' ? (
+        <DialogShell title="Copy + Open Facebook" subtitle="Sao chép nội dung rồi mở Facebook để bạn tự dán và đăng." content={content} contentLength={content.length} maxLength={null} onClose={() => setOpenDialog(null)}>
+          <Button variant="ghost" onClick={() => setOpenDialog(null)}>Hủy</Button>
+          <Button onClick={() => copyAndOpen('facebook')} disabled={busy !== null}>
+            {busy === 'facebook' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Copy + Open Facebook
+          </Button>
+        </DialogShell>
       ) : null}
 
-      {/* Schedule Modal */}
+      {/* LinkedIn dialog */}
+      {openDialog === 'linkedin' ? (
+        <DialogShell title="Copy + Open LinkedIn" subtitle="LinkedIn không có compose URL prefill text. Amplify sẽ copy nội dung rồi mở LinkedIn." content={content} contentLength={content.length} maxLength={null} onClose={() => setOpenDialog(null)}>
+          <Button variant="ghost" onClick={() => setOpenDialog(null)}>Hủy</Button>
+          <Button onClick={() => copyAndOpen('linkedin')} disabled={busy !== null}>
+            {busy === 'linkedin' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Copy + Open LinkedIn
+          </Button>
+        </DialogShell>
+      ) : null}
+
+      {/* Schedule modal */}
       <TimeSlotPicker
         isOpen={showScheduleModal}
         draftId={draft.id}
@@ -315,5 +192,44 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
         onSchedule={handleSchedule}
       />
     </Card>
+  )
+}
+
+function DialogShell({
+  title,
+  subtitle,
+  content,
+  contentLength,
+  maxLength,
+  onClose,
+  children,
+}: {
+  title: string
+  subtitle: string
+  content: string
+  contentLength: number
+  maxLength: number | null
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  const overLimit = maxLength !== null && contentLength > maxLength
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pitch-black/40 p-4">
+      <div className="w-full max-w-[680px] rounded-card border border-app-line bg-pure-canvas p-6 shadow-lg">
+        <h2 className="text-xl text-midnight-ink">{title}</h2>
+        <p className="mt-2 text-sm text-dark-charcoal">{subtitle}</p>
+        <textarea
+          value={content}
+          readOnly
+          className="mt-5 min-h-[220px] w-full resize-y rounded-card border border-app-line bg-app-bg p-4 text-sm leading-6 text-midnight-ink"
+        />
+        {maxLength !== null ? (
+          <p className={`mt-2 text-xs ${overLimit ? 'text-vibrant-orange' : 'text-app-muted'}`}>
+            {contentLength} / {maxLength} ký tự
+          </p>
+        ) : null}
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">{children}</div>
+      </div>
+    </div>
   )
 }

@@ -14,14 +14,17 @@ async function getApiBase() {
 
 // ─── Startup Recovery: check for orphaned tasks ───
 chrome.runtime.onInstalled.addListener(async () => {
-  const stored = await chrome.storage.local.get(PROCESSING_KEY);
+  const stored = await chrome.storage.local.get([PROCESSING_KEY, 'currentProcessingPost']);
   if (stored[PROCESSING_KEY]) {
-    // Extension restarted mid-task — mark as failed after grace period
+    // Extension restarted mid-task — mark as failed after grace period.
+    // Preserve post data in error_message so user can identify the orphaned task.
     setTimeout(async () => {
-      const current = await chrome.storage.local.get(PROCESSING_KEY);
+      const current = await chrome.storage.local.get([PROCESSING_KEY, 'currentProcessingPost']);
       if (current[PROCESSING_KEY]) {
-        await updateTaskStatus(current[PROCESSING_KEY].id, 'failed', null, null, null, null, 'Extension restarted during posting');
-        await chrome.storage.local.remove(PROCESSING_KEY);
+        const post = current.currentProcessingPost;
+        const errMsg = 'Extension restarted during posting' + (post?.id ? ` (post_id: ${post.id})` : '');
+        await updateTaskStatus(current[PROCESSING_KEY].id, 'failed', null, null, null, null, errMsg);
+        await chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
       }
     }, GRACE_PERIOD_MS);
   }
@@ -121,6 +124,15 @@ async function pollAndProcessTask() {
       }
     });
 
+    if (response.status === 401) {
+      // Token expired or invalid — surface this to the popup so user can reconnect.
+      await chrome.storage.local.set({
+        tokenExpired: true,
+        lastStatus: 'Token hết hạn. Vui lòng kết nối lại trong popup.'
+      });
+      return;
+    }
+
     if (!response.ok) return;
 
     const json = await response.json();
@@ -147,9 +159,50 @@ async function pollAndProcessTask() {
 
 // ─── Process a single task ───
 async function processTask(task) {
+  // Bypass used after user clicked "Đăng ngay" in preview — don't loop back to preview.
+  const bypass = await chrome.storage.local.get('_skipAutoPreviewOnce');
+  if (bypass._skipAutoPreviewOnce) {
+    await chrome.storage.local.remove('_skipAutoPreviewOnce');
+  } else {
+    // Phase 3.3: If user enabled auto_preview, hold the task in storage and open popup
+    // for user confirmation. Background later receives `confirmPreview` / `cancelPreview`.
+    const { auto_preview, preview_delay_seconds } = await chrome.storage.local.get([
+      'auto_preview', 'preview_delay_seconds',
+    ]);
+
+    if (auto_preview) {
+      const countdownS = typeof preview_delay_seconds === 'number' ? preview_delay_seconds : 10;
+      const countdownEndsAt = new Date(Date.now() + countdownS * 1000).toISOString();
+      await chrome.storage.local.set({
+        pendingPreview: {
+          id: task.id,
+          channel: task.channel,
+          content: task.content,
+          images: task.images || [],
+          countdownS,
+          countdownEndsAt,
+        },
+      });
+      try { chrome.action.openPopup(); } catch (_) { /* user can still click the icon */ }
+      return;
+    }
+  }
+
+  // Guard: facebook-group needs target_id; without it we would silently post
+  // to the user's personal wall instead of the intended group.
+  if (task.channel === 'facebook-group' && !task.target_id) {
+    console.error('[Amplify] facebook-group task missing target_id', task.id);
+    await updateTaskStatus(
+      task.id, 'failed', null, null, null, null,
+      'Thiếu target_id cho Facebook group. Vui lòng chọn group trước khi đăng.'
+    );
+    pollAndProcessTask();
+    return;
+  }
+
   const platformUrls = {
     'facebook': 'https://www.facebook.com',
-    'facebook-group': task.target_id ? `https://www.facebook.com/groups/${task.target_id}` : 'https://www.facebook.com',
+    'facebook-group': `https://www.facebook.com/groups/${task.target_id}`,
     'threads': 'https://www.threads.net',
     'instagram': 'https://www.instagram.com',
     'x': 'https://x.com/compose/post',
@@ -159,7 +212,7 @@ async function processTask(task) {
 
   const tab = await chrome.tabs.create({ url, active: true });
 
-  // Keep both keys in sync: PROCESSING_KEY for background, currentProcessingPost for automators
+  // Keep both keys in sync: PROCESSING_KEY for background, currentProcessingPost for automators.
   await chrome.storage.local.set({
     [PROCESSING_KEY]: { id: task.id, channel: task.channel, tabId: tab.id, retryCount: 0 },
     currentProcessingPost: {
@@ -173,6 +226,51 @@ async function processTask(task) {
   });
 
   console.log(`[Amplify] Processing task ${task.id} on ${task.channel} in tab ${tab.id}`);
+}
+
+// ─── Phase 3.3: Continue a pending preview after user confirmed ───
+async function continueAfterPreview(taskId) {
+  const apiBase = await getApiBase();
+  const headers = { 'Content-Type': 'application/json' };
+  const local = await chrome.storage.local.get(['api_token']);
+  if (!local.api_token) return;
+  headers['Authorization'] = `Bearer ${local.api_token}`;
+
+  // Mark the task 'processing' so other poll cycles don't double-pick it.
+  try {
+    await fetch(`${apiBase}/api/extension/tasks/${taskId}`, {
+      method: 'PATCH', headers, body: JSON.stringify({ status: 'processing' }),
+    });
+  } catch (e) { console.error('[Amplify] mark processing failed:', e); }
+
+  // Re-fetch full task row so we have the same payload we would have processed otherwise.
+  const res = await fetch(`${apiBase}/api/extension/tasks?limit=10`, { headers });
+  if (!res.ok) return;
+  const { tasks = [] } = await res.json();
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  // Skip the auto_preview check this time by setting a one-shot bypass flag.
+  await chrome.storage.local.set({ _skipAutoPreviewOnce: true });
+  await processTask(task);
+}
+
+// ─── Phase 3.3: Cancel a pending preview via API ───
+async function cancelPreview(taskId) {
+  const local = await chrome.storage.local.get(['api_token', 'api_base']);
+  if (!local.api_token) return;
+  try {
+    await fetch(`${local.api_base}/api/extension/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${local.api_token}`,
+      },
+      body: JSON.stringify({ task_id: taskId, reason: 'Cancelled from preview' }),
+    });
+  } catch (e) { console.error('[Amplify] cancel preview failed:', e); }
+  // Pick the next task immediately if any.
+  pollAndProcessTask();
 }
 
 // ─── Retry logic ───
@@ -211,7 +309,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   } else if (message.action === 'postFailed') {
     chrome.storage.local.remove('currentProcessingPost');
-    handlePostFailed(message);
+    handlePostFailed(message).catch(err => console.error('[Amplify] handlePostFailed error:', err));
     sendResponse({ ok: true });
 
   } else if (message.action === 'fetchImage') {
@@ -228,6 +326,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   } else if (message.action === 'forceScan') {
     chrome.storage.local.remove(PROCESSING_KEY).then(() => pollAndProcessTask());
+    sendResponse({ success: true });
+
+  } else if (message.action === 'confirmPreview') {
+    // User clicked "Đăng ngay" — clear preview state and continue processing this task.
+    chrome.storage.local.remove('pendingPreview').then(() => continueAfterPreview(message.taskId));
+    sendResponse({ success: true });
+
+  } else if (message.action === 'cancelPreview') {
+    // User clicked "Hủy" — mark task cancelled via API.
+    chrome.storage.local.remove('pendingPreview').then(() => cancelPreview(message.taskId));
     sendResponse({ success: true });
 
   } else if (message.action === 'log') {

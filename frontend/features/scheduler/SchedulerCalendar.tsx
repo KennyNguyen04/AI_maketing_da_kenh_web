@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Clock, Calendar as CalendarIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 
 interface ScheduledPost {
   id: string
@@ -21,8 +21,8 @@ interface SchedulerCalendarProps {
 
 const DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
 const MONTHS = [
-  'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-  'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+  'Th?ng 1', 'Th?ng 2', 'Th?ng 3', 'Th?ng 4', 'Th?ng 5', 'Th?ng 6',
+  'Th?ng 7', 'Th?ng 8', 'Th?ng 9', 'Th?ng 10', 'Th?ng 11', 'Th?ng 12'
 ]
 
 function getDaysInMonth(year: number, month: number): number {
@@ -91,7 +91,7 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
     // Empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
       days.push(
-        <div key={`empty-${i}`} className="h-24 border border-light-border bg-light-surface p-1" />
+        <div key={`empty-${i}`} className="h-24 border border-app-line bg-app-bg p-1" />
       )
     }
 
@@ -108,23 +108,23 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
           key={day}
           onClick={() => handleDateClick(day)}
           className={cn(
-            'h-24 border border-light-border p-1 cursor-pointer transition-colors',
-            isToday && 'bg-primary/5 border-primary/30',
+            'h-24 cursor-pointer border border-app-line p-1 transition-colors',
+            isToday && 'border-sky-blue/40 bg-sky-blue/5',
             isPast && 'opacity-50',
-            !isPast && 'hover:bg-light-surface cursor-pointer'
+            !isPast && 'hover:bg-app-bg'
           )}
         >
-          <div className="flex items-center justify-between mb-1">
+          <div className="mb-1 flex items-center justify-between">
             <span
               className={cn(
-                'text-sm font-medium w-6 h-6 flex items-center justify-center rounded-full',
-                isToday && 'bg-primary text-white'
+                'flex h-6 w-6 items-center justify-center rounded-full text-sm font-medium',
+                isToday && 'bg-sky-blue text-pure-canvas'
               )}
             >
               {day}
             </span>
             {dayPosts.length > 0 && (
-              <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+              <span className="rounded-badge bg-sky-blue/10 px-1.5 py-0.5 text-xs text-sky-blue">
                 {dayPosts.length}
               </span>
             )}
@@ -137,24 +137,16 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
                   e.stopPropagation()
                   onPostClick?.(post)
                 }}
-                className="w-full text-left text-xs p-1 rounded bg-light-surface hover:bg-light-border truncate transition-colors"
+                className="w-full truncate rounded bg-app-bg p-1 text-left text-xs transition-colors hover:bg-app-line"
               >
                 <span className={cn(
-                  'inline-block w-1.5 h-1.5 rounded-full mr-1',
-                  post.channel === 'twitter' && 'bg-blue-400',
-                  post.channel === 'x' && 'bg-sky-500',
-                  post.channel === 'facebook' && 'bg-blue-600',
-                  post.channel === 'facebook-group' && 'bg-indigo-600',
-                  post.channel === 'threads' && 'bg-blue-400',
-                  post.channel === 'instagram' && 'bg-pink-500',
-                  post.channel === 'linkedin_post' && 'bg-sky-600',
-                  post.channel === 'linkedin_thread' && 'bg-sky-700'
+                  'mr-1 inline-block h-1.5 w-1.5 rounded-full bg-sky-blue',
                 )} />
                 {post.content.substring(0, 30)}
               </button>
             ))}
             {dayPosts.length > 2 && (
-              <span className="text-xs text-dark-charcoal/60 pl-1">
+              <span className="pl-1 text-xs text-app-muted">
                 +{dayPosts.length - 2} more
               </span>
             )}
@@ -167,10 +159,10 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
   }
 
   return (
-    <div className={cn('bg-white rounded-lg border border-light-border', className)}>
-      <div className="flex items-center justify-between p-4 border-b border-light-border">
+    <div className={cn('rounded-card border border-app-line bg-pure-canvas', className)}>
+      <div className="flex items-center justify-between border-b border-app-line p-4">
         <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-dark-charcoal/60" />
+          <CalendarIcon className="h-5 w-5 text-app-muted" />
           <h3 className="font-semibold text-midnight-ink">
             {MONTHS[currentMonth]} {currentYear}
           </h3>
@@ -178,19 +170,21 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
         <div className="flex items-center gap-2">
           <button
             onClick={goToToday}
-            className="text-sm px-3 py-1.5 text-dark-charcoal/60 hover:text-midnight-ink hover:bg-light-surface rounded-md transition-colors"
+            className="rounded-nav px-3 py-1.5 text-sm text-app-muted transition-colors hover:bg-app-bg hover:text-midnight-ink"
           >
-            Hôm nay
+            H?m nay
           </button>
           <button
             onClick={goToPrevMonth}
-            className="p-1.5 hover:bg-light-surface rounded-md transition-colors"
+            className="rounded-nav p-1.5 transition-colors hover:bg-app-bg"
+            aria-label="Th?ng tr??c"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={goToNextMonth}
-            className="p-1.5 hover:bg-light-surface rounded-md transition-colors"
+            className="rounded-nav p-1.5 transition-colors hover:bg-app-bg"
+            aria-label="Th?ng sau"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -201,7 +195,7 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
         {DAYS.map((day) => (
           <div
             key={day}
-            className="p-2 text-center text-sm font-medium text-dark-charcoal/60 border-b border-light-border bg-light-surface/50"
+            className="border-b border-app-line bg-app-bg/50 p-2 text-center text-sm font-medium text-app-muted"
           >
             {day}
           </div>

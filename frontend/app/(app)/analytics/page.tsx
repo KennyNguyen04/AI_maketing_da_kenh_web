@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { BarChart3, Calendar, ArrowLeft } from 'lucide-react'
 import { StatsOverview, ContentPerformanceTable, StatsChart } from '@/features/analytics'
 import { Button } from '@/components/ui/Button'
+import { Loading } from '@/components/ui/Loading'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { createClient } from '@/lib/supabase/client'
 
 interface AnalyticsStats {
@@ -118,29 +120,29 @@ export default function AnalyticsPage() {
         <div>
           <Link
             href="/dashboard"
-            className="inline-flex items-center text-sm text-dark-charcoal/60 hover:text-midnight-ink mb-2"
+            className="mb-2 inline-flex items-center text-sm text-app-muted hover:text-midnight-ink"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <ArrowLeft className="mr-1 h-4 w-4" />
             Quay lại Dashboard
           </Link>
           <p className="text-sm font-medium text-app-muted">Thống kê hoạt động</p>
           <h1 className="mt-1 text-2xl text-midnight-ink md:text-3xl">Phân tích</h1>
-          <p className="mt-2 text-sm text-dark-charcoal">
+          <p className="mt-2 text-sm text-app-muted">
             Theo dõi hiệu suất và hoạt động đăng bài của bạn
           </p>
         </div>
         <div className="flex items-center gap-3">
           {/* Period Selector */}
-          <div className="flex items-center gap-2 p-1 bg-light-surface rounded-lg">
-            <Calendar className="h-4 w-4 text-dark-charcoal/60 ml-2" />
+          <div className="flex items-center gap-1 rounded-card bg-app-bg p-1">
+            <Calendar className="ml-2 h-4 w-4 text-app-muted" />
             {PERIOD_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setPeriod(option.value)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`rounded-nav px-3 py-1.5 text-sm font-medium transition-colors ${
                   period === option.value
-                    ? 'bg-white text-midnight-ink shadow-sm'
-                    : 'text-dark-charcoal/60 hover:text-midnight-ink'
+                    ? 'bg-pure-canvas text-midnight-ink shadow-sm'
+                    : 'text-app-muted hover:text-midnight-ink'
                 }`}
               >
                 {option.label}
@@ -156,9 +158,7 @@ export default function AnalyticsPage() {
       </header>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-        </div>
+        <Loading size="lg" label="Đang tải thống kê..." />
       ) : analyticsData ? (
         <>
           {/* Stats Overview */}
@@ -187,7 +187,7 @@ export default function AnalyticsPage() {
               >
                 Trước
               </Button>
-              <span className="text-sm text-dark-charcoal/60">
+              <span className="text-sm text-app-muted">
                 Trang {analyticsData.pagination.page} / {analyticsData.pagination.totalPages}
               </span>
               <Button
@@ -202,20 +202,15 @@ export default function AnalyticsPage() {
           )}
         </>
       ) : (
-        <div className="text-center py-12">
-          <BarChart3 className="h-12 w-12 mx-auto text-dark-charcoal/30 mb-4" />
-          <h3 className="text-lg font-medium text-midnight-ink mb-2">
-            Không có dữ liệu phân tích
-          </h3>
-          <p className="text-sm text-dark-charcoal/60 mb-4">
-            Bắt đầu đăng bài để xem thống kê
-          </p>
-          <Link href="/dashboard/new">
-            <Button>
-              Tạo nội dung mới
-            </Button>
-          </Link>
-        </div>
+        <EmptyState
+          icon={BarChart3}
+          title="Không có dữ liệu phân tích"
+          description="Bắt đầu đăng bài để xem thống kê"
+          action={{
+            label: 'Tạo nội dung mới',
+            onClick: () => (window.location.href = '/dashboard/new'),
+          }}
+        />
       )}
     </div>
   )

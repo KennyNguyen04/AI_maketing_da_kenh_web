@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { X, Clock, Calendar, Check } from 'lucide-react'
+import { X, Clock, Calendar, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface TimeSlotPickerProps {
@@ -40,6 +40,11 @@ function formatDate(date: Date): string {
   })
 }
 
+const MONTHS_VI = [
+  'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+  'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
+]
+
 export function TimeSlotPicker({
   isOpen,
   onClose,
@@ -58,6 +63,21 @@ export function TimeSlotPicker({
   const [selectedHour, setSelectedHour] = useState(9)
   const [selectedMinute, setSelectedMinute] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  // ESC handler + focus management
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    // Focus the modal for screen readers
+    setTimeout(() => modalRef.current?.focus(), 0)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [isOpen, isSubmitting, onClose])
 
   if (!isOpen) return null
 
@@ -134,12 +154,10 @@ export function TimeSlotPicker({
   const renderCalendar = () => {
     const days = []
 
-    // Empty cells for days before the first day
     for (let i = 0; i < adjustedFirstDay; i++) {
       days.push(<div key={`empty-${i}`} className="h-10" />)
     }
 
-    // Days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const isDisabled = isDateDisabled(day)
       const isSelected = selectedDate.getDate() === day &&
@@ -156,10 +174,10 @@ export function TimeSlotPicker({
           disabled={isDisabled}
           className={cn(
             'h-10 w-10 rounded-full text-sm font-medium transition-colors',
-            isDisabled && 'text-dark-charcoal/30 cursor-not-allowed',
-            !isDisabled && 'hover:bg-light-surface cursor-pointer',
-            isSelected && 'bg-primary text-white hover:bg-primary',
-            isToday && !isSelected && 'border border-primary text-primary'
+            isDisabled && 'cursor-not-allowed text-app-muted/40',
+            !isDisabled && 'hover:bg-app-bg',
+            isSelected && 'bg-sky-blue text-pure-canvas hover:bg-sky-blue',
+            isToday && !isSelected && 'border border-sky-blue text-sky-blue'
           )}
         >
           {day}
@@ -174,55 +192,62 @@ export function TimeSlotPicker({
     <div className={cn('fixed inset-0 z-50 flex items-center justify-center', className)}>
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-pitch-black/50"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-slot-title"
+        tabIndex={-1}
+        className="relative max-w-md mx-4 w-full overflow-hidden rounded-card border border-app-line bg-pure-canvas shadow-lg"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-light-border">
+        <div className="flex items-center justify-between border-b border-app-line p-4">
           <div>
-            <h2 className="font-semibold text-midnight-ink">Đặt lịch đăng bài</h2>
-            <p className="text-sm text-dark-charcoal/60 mt-0.5">Chọn ngày và giờ đăng bài</p>
+            <h2 id="time-slot-title" className="font-semibold text-midnight-ink">Đặt lịch đăng bài</h2>
+            <p className="mt-0.5 text-sm text-app-muted">Chọn ngày và giờ đăng bài</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-light-surface rounded-lg transition-colors"
+            className="rounded-nav p-2 transition-colors hover:bg-app-bg"
+            aria-label="Đóng"
           >
-            <X className="h-5 w-5 text-dark-charcoal/60" />
+            <X className="h-5 w-5 text-app-muted" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           {/* Calendar */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex items-center justify-between">
               <button
                 onClick={handlePrevMonth}
-                className="p-1.5 hover:bg-light-surface rounded-lg transition-colors"
+                className="rounded-nav p-1.5 transition-colors hover:bg-app-bg"
+                aria-label="Tháng trước"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+                <ChevronLeft className="h-5 w-5" />
               </button>
               <span className="font-medium text-midnight-ink">
-                {selectedDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+                {MONTHS_VI[currentMonth]} {currentYear}
               </span>
               <button
                 onClick={handleNextMonth}
-                className="p-1.5 hover:bg-light-surface rounded-lg transition-colors"
+                className="rounded-nav p-1.5 transition-colors hover:bg-app-bg"
+                aria-label="Tháng sau"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <ChevronRight className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="mb-2 grid grid-cols-7 gap-1">
               {DAYS_OF_WEEK.map((day) => (
-                <div key={day} className="h-10 flex items-center justify-center text-xs font-medium text-dark-charcoal/60">
+                <div key={day} className="flex h-10 items-center justify-center text-xs font-medium text-app-muted">
                   {day}
                 </div>
               ))}
@@ -234,8 +259,8 @@ export function TimeSlotPicker({
           </div>
 
           {/* Selected Date Display */}
-          <div className="flex items-center gap-2 p-3 bg-light-surface rounded-lg">
-            <Calendar className="h-5 w-5 text-primary" />
+          <div className="flex items-center gap-2 rounded-card bg-app-bg p-3">
+            <Calendar className="h-5 w-5 text-sky-blue" />
             <span className="text-sm font-medium text-midnight-ink">
               {formatDate(selectedDate)}
             </span>
@@ -243,7 +268,7 @@ export function TimeSlotPicker({
 
           {/* Quick Time Buttons */}
           <div>
-            <label className="block text-sm font-medium text-midnight-ink mb-2">
+            <label className="mb-2 block text-sm font-medium text-midnight-ink">
               Chọn giờ nhanh
             </label>
             <div className="flex flex-wrap gap-2">
@@ -252,13 +277,13 @@ export function TimeSlotPicker({
                   key={time.label}
                   onClick={() => handleQuickTime(time.hour, time.minute)}
                   className={cn(
-                    'px-3 py-2 text-sm rounded-lg border transition-colors',
+                    'rounded-nav border px-3 py-2 text-sm transition-colors',
                     selectedHour === time.hour && selectedMinute === time.minute
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-white border-light-border hover:bg-light-surface text-midnight-ink'
+                      ? 'border-sky-blue bg-sky-blue text-pure-canvas'
+                      : 'border-app-line bg-pure-canvas text-midnight-ink hover:bg-app-bg'
                   )}
                 >
-                  <Clock className="h-3.5 w-3.5 inline-block mr-1" />
+                  <Clock className="mr-1 inline-block h-3.5 w-3.5" />
                   {time.label}
                 </button>
               ))}
@@ -267,7 +292,7 @@ export function TimeSlotPicker({
 
           {/* Custom Time Input */}
           <div>
-            <label className="block text-sm font-medium text-midnight-ink mb-2">
+            <label className="mb-2 block text-sm font-medium text-midnight-ink">
               Hoặc chọn giờ tùy chỉnh
             </label>
             <div className="flex items-center gap-2">
@@ -282,7 +307,7 @@ export function TimeSlotPicker({
                     return newDate
                   })
                 }}
-                className="flex-1 p-2 border border-light-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className="flex-1 rounded-card border border-app-line bg-pure-canvas p-2 text-sm focus:border-sky-blue focus:outline-none focus:ring-2 focus:ring-sky-blue/20"
               >
                 {Array.from({ length: 24 }, (_, i) => (
                   <option key={i} value={i}>
@@ -290,7 +315,7 @@ export function TimeSlotPicker({
                   </option>
                 ))}
               </select>
-              <span className="text-dark-charcoal/60">:</span>
+              <span className="text-app-muted">:</span>
               <select
                 value={selectedMinute}
                 onChange={(e) => {
@@ -302,7 +327,7 @@ export function TimeSlotPicker({
                     return newDate
                   })
                 }}
-                className="flex-1 p-2 border border-light-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                className="flex-1 rounded-card border border-app-line bg-pure-canvas p-2 text-sm focus:border-sky-blue focus:outline-none focus:ring-2 focus:ring-sky-blue/20"
               >
                 <option value={0}>00</option>
                 <option value={15}>15</option>
@@ -314,25 +339,17 @@ export function TimeSlotPicker({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-light-border bg-light-surface/50">
+        <div className="flex items-center justify-end gap-3 border-t border-app-line bg-app-bg/50 p-4">
           <Button variant="white" onClick={onClose}>
             Hủy
           </Button>
           <Button
             onClick={handleSchedule}
             disabled={isSubmitting}
+            isLoading={isSubmitting}
           >
-            {isSubmitting ? (
-              <>
-                <span className="animate-spin mr-2">⏳</span>
-                Đang đặt lịch...
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Đặt lịch
-              </>
-            )}
+            {!isSubmitting && <Check className="mr-2 h-4 w-4" />}
+            Đặt lịch
           </Button>
         </div>
       </div>

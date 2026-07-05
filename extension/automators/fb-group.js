@@ -98,12 +98,11 @@ window.amplify_injected_fb_group = true;
     return null;
   }
 
-  async function humanTypeText(text) {
-    const chars = text.split('');
-    for (let i = 0; i < chars.length; i++) {
-      const delay = 30 + Math.floor(Math.random() * 90);
-      await sleep(delay);
-    }
+  async function humanTypeText(editor, text) {
+    if (!editor || !text) return;
+    editor.focus();
+    await sleep(200);
+    await AD.humanType(editor, text, 60);
   }
 
   // ══ MAIN FLOW ══
@@ -213,7 +212,7 @@ window.amplify_injected_fb_group = true;
     editor.focus();
     await sleep(500);
     const content = post.content || post.post_content || '';
-    await humanTypeText(content);
+    await humanTypeText(editor, content);
     addLog(`✅ Đã nạp xong nội dung.`);
 
     await sleep(2000);

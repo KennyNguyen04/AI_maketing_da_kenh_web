@@ -22,9 +22,9 @@ export default async function HistoryPage() {
           <ArrowLeft className="h-4 w-4" />
           Quay lại Dashboard
         </Link>
-        <h1 className="text-2xl text-midnight-ink md:text-3xl">Lịch sử đăng bài</h1>
+        <h1 className="text-2xl text-midnight-ink md:text-3xl">Lịch sử đăng bài qua Extension</h1>
         <p className="mt-1 text-sm text-dark-charcoal">
-          Theo dõi tất cả các bài đã đăng lên X và Facebook.
+          Theo dõi các bài đã được Extension tự động đăng qua trình duyệt, hoặc các bạn đã copy để dán thủ công.
         </p>
       </header>
 

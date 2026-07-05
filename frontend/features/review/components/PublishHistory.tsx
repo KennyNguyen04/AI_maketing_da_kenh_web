@@ -29,15 +29,15 @@ interface HistoryResponse {
 }
 
 const STATUS_CONFIG = {
-  draft: { icon: Clock, label: 'Draft', color: 'text-app-muted' },
-  publishing: { icon: Loader2, label: 'Đang đăng', color: 'text-sky-blue' },
-  published: { icon: CheckCircle, label: 'Đã đăng', color: 'text-green-500' },
-  failed: { icon: XCircle, label: 'Thất bại', color: 'text-red-500' },
+  draft: { icon: Clock, label: 'Đã copy', color: 'text-app-muted' },
+  publishing: { icon: Loader2, label: 'Extension đang đăng', color: 'text-sky-blue' },
+  published: { icon: CheckCircle, label: 'Extension đã đăng', color: 'text-forest-fern' },
+  failed: { icon: XCircle, label: 'Thất bại', color: 'text-vibrant-orange' },
 }
 
 const PROVIDER_CONFIG = {
-  x: { icon: Twitter, label: 'X', bgColor: 'bg-black' },
-  facebook: { icon: Facebook, label: 'Facebook', bgColor: 'bg-blue-600' },
+  x: { icon: Twitter, label: 'X', bgColor: 'bg-midnight-ink' },
+  facebook: { icon: Facebook, label: 'Facebook', bgColor: 'bg-sky-blue' },
 }
 
 export function PublishHistory() {
@@ -130,7 +130,7 @@ export function PublishHistory() {
         <Card className="p-8 text-center">
           <p className="text-app-muted">Chưa có lượt đăng nào</p>
           <p className="mt-1 text-sm text-app-muted">
-            Tạo content và đăng lên social media để xem lịch sử ở đây.
+            Copy nội dung từ trang Draft hoặc lên lịch qua Extension để xem lịch sử ở đây.
           </p>
         </Card>
       ) : (
@@ -147,7 +147,7 @@ export function PublishHistory() {
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     {/* Provider badge */}
                     <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${providerConfig.bgColor}`}>
-                      <ProviderIcon className="h-4 w-4 text-white" />
+                      <ProviderIcon className="h-4 w-4 text-pure-canvas" />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -169,7 +169,7 @@ export function PublishHistory() {
 
                       {/* Error message */}
                       {attempt.status === 'failed' && attempt.error_message && (
-                        <div className="mt-2 flex items-start gap-2 rounded bg-red-50 p-2 text-xs text-red-600">
+                        <div className="mt-2 flex items-start gap-2 rounded bg-vibrant-orange/5 p-2 text-xs text-vibrant-orange">
                           <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
                           <span>{attempt.error_message}</span>
                         </div>

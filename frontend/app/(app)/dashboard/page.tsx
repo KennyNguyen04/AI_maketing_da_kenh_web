@@ -7,6 +7,7 @@ import { PublishHistory } from '@/features/review/components/PublishHistory'
 import { ExtensionStatusCheck } from '@/components/ExtensionStatusCheck'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Counter } from '@/components/ui/Counter'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function DashboardPage() {
@@ -94,7 +95,9 @@ export default async function DashboardPage() {
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((item) => (
           <Card key={item.label} className="p-4">
-            <p className="text-2xl font-semibold text-midnight-ink">{item.value}</p>
+            <p className="text-2xl font-semibold text-midnight-ink">
+              <Counter value={item.value} />
+            </p>
             <p className="mt-1 text-sm text-app-muted">{item.label}</p>
           </Card>
         ))}

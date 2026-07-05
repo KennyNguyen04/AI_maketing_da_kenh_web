@@ -35,11 +35,11 @@ interface SocialTarget {
 }
 
 const CHANNELS = [
-  { id: 'facebook', label: 'Facebook', icon: Facebook, color: 'text-sky-600' },
-  { id: 'x', label: 'X (Twitter)', icon: X, color: 'text-gray-900' },
-  { id: 'threads', label: 'Threads', icon: MessageCircle, color: 'text-gray-700' },
-  { id: 'instagram', label: 'Instagram', icon: Facebook, color: 'text-pink-600' },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: 'text-blue-700' },
+  { id: 'facebook', label: 'Facebook', icon: Facebook, color: 'text-sky-blue' },
+  { id: 'x', label: 'X (Twitter)', icon: X, color: 'text-midnight-ink' },
+  { id: 'threads', label: 'Threads', icon: MessageCircle, color: 'text-dark-charcoal' },
+  { id: 'instagram', label: 'Instagram', icon: Facebook, color: 'text-blush-pink' },
+  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: 'text-sky-blue' },
 ]
 
 export function SocialTargetsSettings() {
@@ -245,7 +245,7 @@ export function SocialTargetsSettings() {
       </div>
 
       {message && message.type === 'success' && (
-        <div className="rounded-card border border-green-500/25 bg-green-500/10 p-3 text-sm text-green-700">
+        <div className="rounded-card border border-forest-fern/30 bg-forest-fern/10 p-3 text-sm text-forest-fern">
           {message.text}
         </div>
       )}

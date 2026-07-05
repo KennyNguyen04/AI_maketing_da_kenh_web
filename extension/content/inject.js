@@ -11,6 +11,7 @@ document.documentElement.setAttribute('data-amplify-ext-version', chrome.runtime
 const TRUSTED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
+  'https://amplify-eight-drab.vercel.app',
 ];
 
 // Lắng nghe message từ web app để lưu token (chỉ từ trusted origins)

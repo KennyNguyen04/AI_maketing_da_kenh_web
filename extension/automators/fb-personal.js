@@ -95,18 +95,11 @@ window.amplify_injected_fb_personal = true;
     return null;
   }
 
-  async function humanTypeText(text) {
-    const chars = text.split('');
-    for (let i = 0; i < chars.length; i++) {
-      const delay = 30 + Math.floor(Math.random() * 90);
-      await sleep(delay);
-    }
-  }
-
-  async function autoLikeFeed() {
-    // Delegated to lib/anti-detect.js stub. Auto-like disabled to comply
-    // with Facebook/Threads Terms of Service. See window.__amplifyAntiDetect.
-    addLog('Auto-like đã bị tắt để tuân thủ chính sách nền tảng.');
+  async function humanTypeText(editor, text) {
+    if (!editor || !text) return;
+    editor.focus();
+    await sleep(200);
+    await AD.humanType(editor, text, 60);
   }
 
   // ══ MAIN FLOW ══
@@ -131,6 +124,7 @@ window.amplify_injected_fb_personal = true;
     // Require real images — do not post without images
     if (images.length === 0) {
       throw new Error("Bài không có ảnh. Vui lòng thêm ảnh trước khi đăng.");
+    }
 
     addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
     const dt = new DataTransfer();
@@ -195,7 +189,7 @@ window.amplify_injected_fb_personal = true;
     editor.focus();
     await sleep(500);
     const content = post.content || post.post_content || '';
-    await humanTypeText(content);
+    await humanTypeText(editor, content);
     addLog(`✅ Đã nạp xong nội dung.`);
 
     await sleep(2000);
