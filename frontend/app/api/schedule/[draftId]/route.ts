@@ -41,7 +41,7 @@ export async function POST(
 
     const { data: draft, error: fetchError } = await supabase
       .from('drafts')
-      .select('id, publish_status, content, channel, images, target_id')
+      .select('id, publish_status, content, channel')
       .eq('id', draftId)
       .eq('user_id', user.id)
       .single()
@@ -105,8 +105,8 @@ export async function POST(
         draft_id: draftId,
         channel: extChannel,
         content: draft.content,
-        images: draft.images || [],
-        target_id: draft.target_id || null,
+        images: [],
+        target_id: null,
         target_type: 'auto',
         scheduled_for: scheduledDate.toISOString(),
         status: 'pending',
