@@ -324,6 +324,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(e => sendResponse({ success: false, error: e.message }));
     return true; // async response
 
+  } else if (message.action === 'fetchMediaByUploadId') {
+    // Resolves an internal uploadId (e.g. "upl_xxx_yyy") against the server's
+    // in-memory media store. Authentication uses the same Bearer API token the
+    // extension uses for /api/extension/tasks. Returns the same {dataUrl, type}
+    // shape as fetchImage so the calling automator doesn't have to branch.
+    (async () => {
+      try {
+        const apiBase = await getApiBase();
+        const local = await chrome.storage.local.get(['api_token']);
+        if (!local.api_token) {
+          sendResponse({ success: false, error: 'No API token' });
+          return;
+        }
+        const res = await fetch(`${apiBase}/api/media/${message.uploadId}`, {
+          headers: { 'Authorization': `Bearer ${local.api_token}` },
+        });
+        if (!res.ok) {
+          sendResponse({ success: false, error: `Media fetch failed (${res.status})` });
+          return;
+        }
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => sendResponse({ success: true, dataUrl: reader.result, type: blob.type });
+        reader.onerror = () => sendResponse({ success: false, error: 'FileReader error' });
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        sendResponse({ success: false, error: e.message });
+      }
+    })();
+    return true; // async response
+
   } else if (message.action === 'forceScan') {
     chrome.storage.local.remove(PROCESSING_KEY).then(() => pollAndProcessTask());
     sendResponse({ success: true });

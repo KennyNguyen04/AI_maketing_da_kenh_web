@@ -48,7 +48,10 @@ window.amplify_injected_x = true;
 
   function fetchImageViaBackground(url) {
     return new Promise(resolve => {
-      chrome.runtime.sendMessage({ action: 'fetchImage', url }, res => {
+      const isUploadId = typeof url === 'string' && url.startsWith('upl_');
+      const action = isUploadId ? 'fetchMediaByUploadId' : 'fetchImage';
+      const payload = isUploadId ? { uploadId: url } : { url };
+      chrome.runtime.sendMessage({ action, ...payload }, res => {
         if (res && res.success) resolve(res);
         else resolve(null);
       });

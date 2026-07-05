@@ -56,7 +56,10 @@ window.amplify_injected_ig = true;
 
   function fetchImageViaBackground(url) {
     return new Promise(resolve => {
-      chrome.runtime.sendMessage({ action: 'fetchImage', url }, res => {
+      const isUploadId = typeof url === 'string' && url.startsWith('upl_');
+      const action = isUploadId ? 'fetchMediaByUploadId' : 'fetchImage';
+      const payload = isUploadId ? { uploadId: url } : { url };
+      chrome.runtime.sendMessage({ action, ...payload }, res => {
         if (res && res.success) resolve(res);
         else resolve(null);
       });
@@ -126,7 +129,7 @@ window.amplify_injected_ig = true;
     } catch (e) {}
 
     if (images.length === 0) {
-      addLog('⚠️ Bài không có ảnh.');
+      addLog('⚠️ Bài không có ảnh — sẽ đăng text-only (IG cho phép).');
     }
 
     // IG cho phép tối đa 10 file
@@ -146,7 +149,9 @@ window.amplify_injected_ig = true;
         addLog(`❌ Lỗi tải ảnh [${i + 1}]`);
       }
     }
-    if (files.length === 0) throw new Error('Không tải được ảnh nào');
+    if (files.length === 0 && images.length > 0) {
+      addLog('⚠️ Không tải được ảnh nào — chuyển sang text-only.');
+    }
 
     // 2. Mở nút Create (+)
     addLog('Tìm nút Create (+)...');

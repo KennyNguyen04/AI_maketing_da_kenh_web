@@ -5,6 +5,7 @@ import { Calendar, ExternalLink, Facebook, Loader2, Send, Twitter, Zap } from 'l
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { TimeSlotPicker } from '@/features/scheduler'
+import { MediaUploader } from './MediaUploader'
 
 interface DraftForPublish {
   id: string
@@ -63,6 +64,8 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
   const [message, setMessage] = useState('')
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [openDialog, setOpenDialog] = useState<'x' | 'facebook' | 'threads' | 'instagram' | 'linkedin' | null>(null)
+  const [imageRefs, setImageRefs] = useState<string[]>([])
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false)
 
   const channelInfo = CHANNEL_LABELS[draft.channel] ?? CHANNEL_LABELS.x
   const canSchedule = SCHEDULABLE_CHANNELS.has(draft.channel)
@@ -113,7 +116,10 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
       const res = await fetch(`/api/schedule/${draftId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scheduledFor: scheduledFor.toISOString() }),
+        body: JSON.stringify({
+          scheduledFor: scheduledFor.toISOString(),
+          imageRefs,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -139,14 +145,18 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
       const res = await fetch(`/api/schedule/${draft.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scheduledFor: scheduledFor.toISOString() }),
+        body: JSON.stringify({
+          scheduledFor: scheduledFor.toISOString(),
+          imageRefs,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to enqueue post')
+      const attachmentNote = imageRefs.length > 0 ? ` (đính kèm ${imageRefs.length} ảnh)` : ' (text-only)'
       setMessage(
         extensionOnline
-          ? 'Đã gửi tới Extension. Extension sẽ đăng trong vài giây. Mở trang lịch sử để theo dõi.'
-          : 'Đã xếp hàng đợi (Extension đang offline). Mở Extension trên Chrome để Extension đăng ngay khi online.',
+          ? `Đã gửi tới Extension${attachmentNote}. Extension sẽ đăng trong vài giây. Mở trang lịch sử để theo dõi.`
+          : `Đã xếp hàng đợi${attachmentNote} (Extension đang offline). Mở Extension trên Chrome để Extension đăng ngay khi online.`,
       )
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error))
@@ -187,10 +197,12 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
             <Button
               size="sm"
               variant="white"
-              disabled={busy !== null || !extensionChecked}
+              disabled={busy !== null || !extensionChecked || isUploadingMedia}
               onClick={handlePostNow}
               title={
-                extensionOnline
+                isUploadingMedia
+                  ? 'Đang tải ảnh lên, vui lòng đợi...'
+                  : extensionOnline
                   ? 'Extension sẽ đăng bài này trong vài giây'
                   : 'Extension offline — task sẽ đợi đến khi Extension chạy lại'
               }
@@ -201,6 +213,15 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
           )}
         </div>
       </div>
+
+      {canSchedule ? (
+        <MediaUploader
+          uploadIds={imageRefs}
+          onChange={setImageRefs}
+          onUploadingChange={setIsUploadingMedia}
+          maxFiles={draft.channel === 'x' || draft.channel === 'twitter' ? 4 : 4}
+        />
+      ) : null}
 
       {overXLimit ? (
         <p className="text-xs text-vibrant-orange">

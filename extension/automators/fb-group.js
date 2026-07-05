@@ -58,7 +58,10 @@ window.amplify_injected_fb_group = true;
 
   function fetchImageViaBackground(url) {
     return new Promise(resolve => {
-      chrome.runtime.sendMessage({ action: 'fetchImage', url }, res => {
+      const isUploadId = typeof url === 'string' && url.startsWith('upl_');
+      const action = isUploadId ? 'fetchMediaByUploadId' : 'fetchImage';
+      const payload = isUploadId ? { uploadId: url } : { url };
+      chrome.runtime.sendMessage({ action, ...payload }, res => {
         if (res && res.success) resolve(res);
         else resolve(null);
       });
@@ -117,35 +120,34 @@ window.amplify_injected_fb_group = true;
       return;
     }
 
-    // 1. Chuẩn bị ảnh
+    // 1. Chuẩn bị ảnh (optional — Facebook group cho đăng text-only)
     let images = [];
     try {
       const raw = post.images || [];
       images = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch(e) {}
 
-    // Require real images
     if (images.length === 0) {
-      throw new Error("Bài không có ảnh. Vui lòng thêm ảnh trước khi đăng.");
-    }
+      addLog('⚠️ Không có ảnh — sẽ đăng text-only.');
+    } else {
+      addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
+      const dt = new DataTransfer();
+      for (let i = 0; i < images.length; i++) {
+        try {
+          const res = await fetchImageViaBackground(images[i]);
+          if (res && res.dataUrl) {
+            const file = dataURLtoFile(res.dataUrl, `img_${i}.png`);
+            dt.items.add(file);
+            addLog(`✅ Nạp thành công ảnh [${i+1}]`);
+          } else {
+            addLog(`❌ Lỗi tải ảnh [${i+1}]`);
+          }
+        } catch(e) { addLog(`❌ Bị chặn tải ảnh [${i+1}]`); }
+      }
 
-    addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
-    const dt = new DataTransfer();
-    for (let i = 0; i < images.length; i++) {
-      try {
-        const res = await fetchImageViaBackground(images[i]);
-        if (res && res.dataUrl) {
-          const file = dataURLtoFile(res.dataUrl, `img_${i}.png`);
-          dt.items.add(file);
-          addLog(`✅ Nạp thành công ảnh [${i+1}]`);
-        } else {
-          addLog(`❌ Lỗi tải ảnh [${i+1}]`);
-        }
-      } catch(e) { addLog(`❌ Bị chặn tải ảnh [${i+1}]`); }
-    }
-
-    if (dt.files.length === 0 && images.length > 0) {
-      throw new Error("Không thể nạp được bất kỳ ảnh nào.");
+      if (dt.files.length === 0) {
+        addLog('⚠️ Không tải được ảnh nào — chuyển sang text-only.');
+      }
     }
 
     // 2. Mở modal đăng bài
@@ -166,27 +168,28 @@ window.amplify_injected_fb_group = true;
       }
     }
 
-    // 3. Tìm và đẩy ảnh vào file input
+    // 3. Tìm và đẩy ảnh vào file input (skip khi không có file)
     addLog(`Đang tìm khay chứa ảnh ẩn...`);
     let activeModal = document.querySelector('div[aria-modal="true"][role="dialog"]') || document;
-    let fileInput = activeModal.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
-
-    if (!fileInput) {
-      addLog(`Không tìm thấy thẻ ẩn, thử bấm "Ảnh/video"...`);
-      const photoBtn = await findSmartElement(["Ảnh/video", "Photo/video"], 3, true, activeModal);
-      if (photoBtn) {
-        doClick(photoBtn);
-        await sleep(1500);
-      }
-      activeModal = document.querySelector('div[aria-modal="true"][role="dialog"]') || document;
+    let fileInput = null;
+    if (dt.files.length > 0) {
       fileInput = activeModal.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
-    }
 
-    if (!fileInput && dt.files.length > 0) {
-      throw new Error("Không thể tìm thấy vị trí chèn ảnh.");
-    }
+      if (!fileInput) {
+        addLog(`Không tìm thấy thẻ ẩn, thử bấm "Ảnh/video"...`);
+        const photoBtn = await findSmartElement(["Ảnh/video", "Photo/video"], 3, true, activeModal);
+        if (photoBtn) {
+          doClick(photoBtn);
+          await sleep(1500);
+        }
+        activeModal = document.querySelector('div[aria-modal="true"][role="dialog"]') || document;
+        fileInput = activeModal.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
+      }
 
-    if (fileInput && dt.files.length > 0) {
+      if (!fileInput) {
+        throw new Error("Không thể tìm thấy vị trí chèn ảnh.");
+      }
+
       addLog(`Đẩy ${dt.files.length} ảnh vào...`);
       const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'files').set;
       if (nativeSetter) { nativeSetter.call(fileInput, dt.files); }
@@ -194,6 +197,8 @@ window.amplify_injected_fb_group = true;
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
       addLog(`⏳ Đợi Modal render (5s)...`);
       await sleep(5000);
+    } else {
+      addLog(`Bỏ qua bước đính ảnh — chỉ đăng text.`);
     }
 
     // 4. Điền text

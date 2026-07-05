@@ -56,7 +56,10 @@ window.amplify_injected_threads = true;
 
   function fetchImageViaBackground(url) {
     return new Promise(resolve => {
-      chrome.runtime.sendMessage({ action: 'fetchImage', url }, res => {
+      const isUploadId = typeof url === 'string' && url.startsWith('upl_');
+      const action = isUploadId ? 'fetchMediaByUploadId' : 'fetchImage';
+      const payload = isUploadId ? { uploadId: url } : { url };
+      chrome.runtime.sendMessage({ action, ...payload }, res => {
         if (res && res.success) resolve(res);
         else resolve(null);
       });
@@ -117,35 +120,34 @@ window.amplify_injected_threads = true;
       return;
     }
 
-    // 1. Chuẩn bị ảnh
+    // 1. Chuẩn bị ảnh (optional — Threads cho đăng text-only)
     let images = [];
     try {
       const raw = post.images || [];
       images = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch (e) {}
 
-    // Require real images
     if (images.length === 0) {
-      throw new Error("Bài không có ảnh. Vui lòng thêm ảnh trước khi đăng.");
-    }
+      addLog('⚠️ Không có ảnh — sẽ đăng text-only.');
+    } else {
+      addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
+      const dt = new DataTransfer();
+      for (let i = 0; i < images.length; i++) {
+        try {
+          const res = await fetchImageViaBackground(images[i]);
+          if (res && res.dataUrl) {
+            const file = dataURLtoFile(res.dataUrl, `img_${i}.png`);
+            dt.items.add(file);
+            addLog(`✅ Nạp thành công ảnh [${i+1}]`);
+          } else {
+            addLog(`❌ Lỗi tải ảnh [${i+1}]`);
+          }
+        } catch (e) { addLog(`❌ Bị chặn tải ảnh [${i+1}]`); }
+      }
 
-    addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
-    const dt = new DataTransfer();
-    for (let i = 0; i < images.length; i++) {
-      try {
-        const res = await fetchImageViaBackground(images[i]);
-        if (res && res.dataUrl) {
-          const file = dataURLtoFile(res.dataUrl, `img_${i}.png`);
-          dt.items.add(file);
-          addLog(`✅ Nạp thành công ảnh [${i+1}]`);
-        } else {
-          addLog(`❌ Lỗi tải ảnh [${i+1}]`);
-        }
-      } catch (e) { addLog(`❌ Bị chặn tải ảnh [${i+1}]`); }
-    }
-
-    if (dt.files.length === 0 && images.length > 0) {
-      throw new Error("Không thể nạp được bất kỳ ảnh nào.");
+      if (dt.files.length === 0) {
+        addLog('⚠️ Không tải được ảnh nào — chuyển sang text-only.');
+      }
     }
 
     // 2. Mở modal đăng bài
@@ -180,23 +182,24 @@ window.amplify_injected_threads = true;
       fileInput = activeModal.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
     }
 
-    // 3. Tìm và đẩy ảnh
+    // 3. Tìm và đẩy ảnh (skip khi không có file)
     addLog(`Tìm khay chứa ảnh ẩn...`);
-    if (!fileInput) {
-      const photoBtn = await findSmartElement(["Ảnh/video", "Photo/video", "Add Media", "Thêm file"], 3, true, activeModal);
-      if (photoBtn) {
-        doClick(photoBtn);
-        await sleep(1500);
+    let fileInput = null;
+    if (dt.files.length > 0) {
+      if (!fileInput) {
+        const photoBtn = await findSmartElement(["Ảnh/video", "Photo/video", "Add Media", "Thêm file"], 3, true, activeModal);
+        if (photoBtn) {
+          doClick(photoBtn);
+          await sleep(1500);
+        }
+        activeModal = document.querySelector('div[aria-modal="true"][role="dialog"]') || document;
+        fileInput = activeModal.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
       }
-      activeModal = document.querySelector('div[aria-modal="true"][role="dialog"]') || document;
-      fileInput = activeModal.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
-    }
 
-    if (!fileInput && dt.files.length > 0) {
-      throw new Error("Không thể tìm thấy vị trí chèn ảnh trên Threads.");
-    }
+      if (!fileInput) {
+        throw new Error("Không thể tìm thấy vị trí chèn ảnh trên Threads.");
+      }
 
-    if (fileInput && dt.files.length > 0) {
       addLog(`Đẩy ${dt.files.length} ảnh vào...`);
       const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'files').set;
       if (nativeSetter) { nativeSetter.call(fileInput, dt.files); }
@@ -204,6 +207,8 @@ window.amplify_injected_threads = true;
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
       addLog(`⏳ Đợi Modal render (5s)...`);
       await sleep(5000);
+    } else {
+      addLog(`Bỏ qua bước đính ảnh — chỉ đăng text.`);
     }
 
     // 4. Điền text

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { owns, isUploadId } from '@/lib/media-store'
 
 export async function POST(
   request: NextRequest,
@@ -15,7 +16,7 @@ export async function POST(
 
     const { draftId } = await params
     const body = await request.json()
-    const { scheduledFor } = body
+    const { scheduledFor, imageRefs } = body
 
     if (!scheduledFor) {
       return NextResponse.json(
@@ -67,6 +68,18 @@ export async function POST(
       )
     }
 
+    // Validate imageRefs: each must be a well-formed uploadId owned by this user.
+    // Empty array is allowed (post text-only).
+    const refs: string[] = Array.isArray(imageRefs) ? imageRefs : []
+    for (const ref of refs) {
+      if (typeof ref !== 'string' || !isUploadId(ref) || !owns(ref, user.id)) {
+        return NextResponse.json(
+          { error: `Invalid imageRef: ${ref}` },
+          { status: 400 }
+        )
+      }
+    }
+
     const { data: updatedDraft, error: updateError } = await supabase
       .from('drafts')
       .update({
@@ -105,7 +118,7 @@ export async function POST(
         draft_id: draftId,
         channel: extChannel,
         content: draft.content,
-        images: [],
+        images: refs,
         target_id: null,
         target_type: 'auto',
         scheduled_for: scheduledDate.toISOString(),

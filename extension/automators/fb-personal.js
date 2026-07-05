@@ -56,7 +56,13 @@ window.amplify_injected_fb_personal = true;
 
   function fetchImageViaBackground(url) {
     return new Promise(resolve => {
-      chrome.runtime.sendMessage({ action: 'fetchImage', url }, res => {
+      // uploadId refs (from in-memory media store) are resolved via a dedicated
+      // background message so we can authenticate with the API token. Public
+      // URLs keep using the legacy fetchImage handler for backward compat.
+      const isUploadId = typeof url === 'string' && url.startsWith('upl_');
+      const action = isUploadId ? 'fetchMediaByUploadId' : 'fetchImage';
+      const payload = isUploadId ? { uploadId: url } : { url };
+      chrome.runtime.sendMessage({ action, ...payload }, res => {
         if (res && res.success) resolve(res);
         else resolve(null);
       });
@@ -114,56 +120,56 @@ window.amplify_injected_fb_personal = true;
       return;
     }
 
-    // 1. Chuẩn bị ảnh
+    // 1. Chuẩn bị ảnh (optional — Facebook cá nhân cho đăng text-only)
     let images = [];
     try {
       const raw = post.images || [];
       images = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch(e) {}
 
-    // Require real images — do not post without images
     if (images.length === 0) {
-      throw new Error("Bài không có ảnh. Vui lòng thêm ảnh trước khi đăng.");
-    }
-
-    addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
-    const dt = new DataTransfer();
-    for (let i = 0; i < images.length; i++) {
-      try {
-        const res = await fetchImageViaBackground(images[i]);
-        if (res && res.dataUrl) {
-          const file = dataURLtoFile(res.dataUrl, `img_${i}.png`);
-          dt.items.add(file);
-          addLog(`✅ Nạp thành công ảnh [${i+1}]`);
-        } else {
-          addLog(`❌ Lỗi tải ảnh [${i+1}]`);
-        }
-      } catch(e) { addLog(`❌ Bị chặn tải ảnh [${i+1}]`); }
-    }
-
-    if (dt.files.length === 0 && images.length > 0) {
-      throw new Error("Không thể nạp được bất kỳ ảnh nào.");
-    }
-
-    // 2. Tìm và đẩy ảnh
-    addLog(`Tìm khay chứa ảnh ẩn...`);
-    let fileInput = document.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
-
-    if (!fileInput) {
-      addLog(`Không tìm thấy thẻ ẩn, thử bấm "Ảnh/video"...`);
-      const photoBtn = await findSmartElement(["Ảnh/video", "Photo/video"], 3, true);
-      if (photoBtn) {
-        doClick(photoBtn);
-        await sleep(1500);
+      addLog('⚠️ Không có ảnh — sẽ đăng text-only.');
+    } else {
+      addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
+      const dt = new DataTransfer();
+      for (let i = 0; i < images.length; i++) {
+        try {
+          const res = await fetchImageViaBackground(images[i]);
+          if (res && res.dataUrl) {
+            const file = dataURLtoFile(res.dataUrl, `img_${i}.png`);
+            dt.items.add(file);
+            addLog(`✅ Nạp thành công ảnh [${i+1}]`);
+          } else {
+            addLog(`❌ Lỗi tải ảnh [${i+1}]`);
+          }
+        } catch(e) { addLog(`❌ Bị chặn tải ảnh [${i+1}]`); }
       }
+
+      if (dt.files.length === 0) {
+        addLog('⚠️ Không tải được ảnh nào — chuyển sang text-only.');
+      }
+    }
+
+    // 2. Tìm và đẩy ảnh (skip khi không có file — đăng text-only)
+    addLog(`Tìm khay chứa ảnh ẩn...`);
+    let fileInput = null;
+    if (dt.files.length > 0) {
       fileInput = document.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
-    }
 
-    if (!fileInput && dt.files.length > 0) {
-      throw new Error("Không thể tìm thấy vị trí chèn ảnh trên Facebook.");
-    }
+      if (!fileInput) {
+        addLog(`Không tìm thấy thẻ ẩn, thử bấm "Ảnh/video"...`);
+        const photoBtn = await findSmartElement(["Ảnh/video", "Photo/video"], 3, true);
+        if (photoBtn) {
+          doClick(photoBtn);
+          await sleep(1500);
+        }
+        fileInput = document.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
+      }
 
-    if (fileInput && dt.files.length > 0) {
+      if (!fileInput) {
+        throw new Error("Không thể tìm thấy vị trí chèn ảnh trên Facebook.");
+      }
+
       addLog(`Đẩy ${dt.files.length} ảnh vào...`);
       const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'files').set;
       if (nativeSetter) { nativeSetter.call(fileInput, dt.files); }
@@ -171,6 +177,8 @@ window.amplify_injected_fb_personal = true;
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
       addLog(`⏳ Đợi Modal render (5s)...`);
       await sleep(5000);
+    } else {
+      addLog(`Bỏ qua bước đính ảnh — chỉ đăng text.`);
     }
 
     // 3. Điền text
