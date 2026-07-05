@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
       .from('drafts')
       .select('channel, publish_status')
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
 
     const channelStats = {
       linkedin_post: { total: 0, scheduled: 0, published: 0 },

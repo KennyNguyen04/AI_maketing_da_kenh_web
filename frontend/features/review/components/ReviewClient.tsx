@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 import { Channel } from '@/lib/types'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Toast } from '@/components/ui/Toast'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DraftEditor } from '@/features/review/components/DraftEditor'
 import { DraftTabs } from '@/features/review/components/DraftTabs'
 import { MarkDoneButton } from '@/features/review/components/MarkDoneButton'
@@ -25,6 +26,8 @@ export function ReviewClient({ job, initialDrafts }: { job: any; initialDrafts: 
   const [copied, setCopied] = useState(0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [drafts, setDrafts] = useState<any[]>(initialDrafts)
+  const [confirmDeleteJob, setConfirmDeleteJob] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const draft = useMemo(() => drafts.find((item) => item.channel === active) ?? drafts[0], [active, drafts])
 
   const title = job.title || (job.source_type === 'url' ? 'Bài viết từ URL' : 'Nội dung dán')
@@ -43,6 +46,27 @@ export function ReviewClient({ job, initialDrafts }: { job: any; initialDrafts: 
 
     setDrafts(prev => prev.map(d => ({ ...d, is_done: true })))
     setToast('Tất cả bản nháp đã được đánh dấu hoàn thành.')
+  }
+
+  async function handleDeleteJob() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/jobs/${job.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Không thể xoá job')
+      }
+      setConfirmDeleteJob(false)
+      router.push('/dashboard')
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : String(error))
+      setDeleting(false)
+    }
+  }
+
+  function handleDraftDeleted(draftId: string) {
+    setDrafts(prev => prev.filter(d => d.id !== draftId))
+    setToast('Đã xoá bản nháp.')
   }
 
   return (
@@ -76,6 +100,7 @@ export function ReviewClient({ job, initialDrafts }: { job: any; initialDrafts: 
                     setCopied((count) => count + 1)
                     setToast('Đã sao chép bản nháp.')
                   }}
+                  onDraftDeleted={() => handleDraftDeleted(draft.id)}
                 />
               </div>
             </>
@@ -89,8 +114,24 @@ export function ReviewClient({ job, initialDrafts }: { job: any; initialDrafts: 
 
       <div className="sticky bottom-[64px] mt-6 flex flex-col gap-3 rounded-card border border-app-line bg-pure-canvas/95 px-4 py-3 shadow-sm backdrop-blur md:bottom-0 md:flex-row md:items-center md:justify-between">
         <p className="text-sm text-dark-charcoal">{drafts.length} bản nháp · {copied} lần sao chép</p>
-        <Button variant="ghost" onClick={() => router.push('/dashboard')}>Về Dashboard</Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="danger" size="sm" disabled={deleting} onClick={() => setConfirmDeleteJob(true)}>
+            <Trash2 className="h-4 w-4" /> Xóa cả job
+          </Button>
+          <Button variant="ghost" onClick={() => router.push('/dashboard')}>Về Dashboard</Button>
+        </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDeleteJob}
+        title="Xóa toàn bộ job này?"
+        message={`Job "${title}" và ${drafts.length} bản nháp sẽ bị ẩn. Lịch sử đăng bài (nếu có) vẫn được giữ để thống kê. Nếu có bản nháp đang chờ Extension đăng, bạn cần huỷ lịch trước.`}
+        confirmText="Xóa cả job"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDeleteJob}
+        onCancel={() => setConfirmDeleteJob(false)}
+      />
 
       <Toast type="success" message={toast} isVisible={Boolean(toast)} onClose={() => setToast('')} />
     </div>

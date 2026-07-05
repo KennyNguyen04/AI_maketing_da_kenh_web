@@ -60,6 +60,7 @@ export async function POST(
       .select('id, job_id, user_id, channel, content')
       .eq('id', draftId)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (draftError || !draft) {

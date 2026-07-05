@@ -20,6 +20,7 @@ export async function DELETE(
       .select('id, publish_status')
       .eq('id', draftId)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (fetchError || !draft) {

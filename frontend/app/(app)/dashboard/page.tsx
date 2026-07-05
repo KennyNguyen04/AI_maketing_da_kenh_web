@@ -22,6 +22,7 @@ export default async function DashboardPage() {
     .from('repurpose_jobs')
     .select('*')
     .eq('user_id', user.id)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false })
 
   const completed = jobs?.filter((job) => job.status === 'done').length || 0
@@ -30,6 +31,7 @@ export default async function DashboardPage() {
     .from('drafts')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .eq('is_deleted', false)
 
   const firstName = user.user_metadata?.full_name?.split(' ').at(-1) || 'bạn'
 
@@ -38,6 +40,7 @@ export default async function DashboardPage() {
     .select('*')
     .eq('user_id', user.id)
     .eq('is_active', true)
+    .eq('is_deleted', false)
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
@@ -49,6 +52,7 @@ export default async function DashboardPage() {
     .from('brand_vaults')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .eq('is_deleted', false)
 
   const stats = [
     { value: completed, label: 'Đã hoàn thành' },

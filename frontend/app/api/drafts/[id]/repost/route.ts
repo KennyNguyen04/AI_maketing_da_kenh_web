@@ -34,6 +34,7 @@ export async function POST(
       .select('id, content, channel, publish_status')
       .eq('id', draftId)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (draftErr || !draft) {

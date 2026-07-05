@@ -25,6 +25,7 @@ export async function POST(
       .select('*')
       .eq('id', id)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (draftError || !oldDraft) {
@@ -37,6 +38,7 @@ export async function POST(
       .select('*')
       .eq('id', oldDraft.job_id)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (jobError || !job) {
@@ -49,6 +51,7 @@ export async function POST(
       .select('system_prompt')
       .eq('id', job.brand_vault_id)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (vaultError || !vault) {

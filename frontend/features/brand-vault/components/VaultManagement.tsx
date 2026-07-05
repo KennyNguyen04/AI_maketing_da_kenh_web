@@ -28,6 +28,7 @@ import { clsx } from 'clsx'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tag } from '@/components/ui/Tag'
 import { Tabs } from '@/components/ui/Tabs'
 import { Toast } from '@/components/ui/Toast'
@@ -85,6 +86,7 @@ export function VaultManagement({ initialVaults }: VaultManagementProps) {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [reanalyzingId, setReanalyzingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteVault, setConfirmDeleteVault] = useState<Vault | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
@@ -182,24 +184,26 @@ export function VaultManagement({ initialVaults }: VaultManagementProps) {
 
   async function handleDelete(vault: Vault) {
     setMenuOpenId(null)
-    if (!confirm(`Xóa Brand Vault "${vault.display_name || vault.name}"? Hành động này không thể hoàn tác.`)) {
-      return
-    }
+    setConfirmDeleteVault(vault)
+  }
 
+  async function confirmDelete() {
+    if (!confirmDeleteVault) return
+    const vault = confirmDeleteVault
+    setConfirmDeleteVault(null)
     setDeletingId(vault.id)
     try {
-      const { error } = await supabase
-        .from('brand_vaults')
-        .delete()
-        .eq('id', vault.id)
-
-      if (error) throw error
+      const res = await fetch(`/api/vaults/${vault.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete vault')
+      }
 
       setVaults((prev) => prev.filter((v) => v.id !== vault.id))
-      showToast('success', 'Đã xóa Brand Vault.')
+      showToast('success', 'Đã ẩn Brand Vault.')
     } catch (error) {
       console.error('Error deleting vault:', error)
-      showToast('error', 'Không thể xóa Brand Vault.')
+      showToast('error', error instanceof Error ? error.message : 'Không thể xoá Brand Vault.')
     } finally {
       setDeletingId(null)
     }
@@ -285,6 +289,21 @@ export function VaultManagement({ initialVaults }: VaultManagementProps) {
           onClose={() => setToast(null)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDeleteVault !== null}
+        title="Xóa Brand Vault này?"
+        message={
+          confirmDeleteVault
+            ? `Brand Vault "${confirmDeleteVault.display_name || confirmDeleteVault.name}" sẽ bị ẩn. Bạn sẽ không chọn được nó khi tạo nội dung. Các bài viết cũ vẫn giữ nguyên.`
+            : ''
+        }
+        confirmText="Xóa Brand Vault"
+        variant="danger"
+        loading={deletingId !== null}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDeleteVault(null)}
+      />
 
       {/* Stats strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

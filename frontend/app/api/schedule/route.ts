@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         )
       `, { count: 'exact' })
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
 
     if (status === 'scheduled') {
       query = query

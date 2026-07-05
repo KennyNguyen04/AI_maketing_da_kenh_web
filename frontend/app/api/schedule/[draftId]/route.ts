@@ -45,6 +45,7 @@ export async function POST(
       .select('id, publish_status, content, channel')
       .eq('id', draftId)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (fetchError || !draft) {
@@ -164,6 +165,7 @@ export async function GET(
       .select('*')
       .eq('id', draftId)
       .eq('user_id', user.id)
+      .eq('is_deleted', false)
       .single()
 
     if (error || !draft) {

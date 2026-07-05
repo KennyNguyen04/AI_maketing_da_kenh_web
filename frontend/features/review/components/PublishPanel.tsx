@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Calendar, ExternalLink, Facebook, Loader2, Send, Twitter, Zap } from 'lucide-react'
+import { Calendar, ExternalLink, Facebook, Loader2, Send, Trash2, Twitter, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { TimeSlotPicker } from '@/features/scheduler'
 import { MediaUploader } from './MediaUploader'
 
@@ -57,7 +58,15 @@ const CHANNEL_LABELS: Record<string, { label: string; url: string; copyHint: str
 // Channels hỗ trợ lên lịch qua Extension (browser automation).
 const SCHEDULABLE_CHANNELS = new Set(['x', 'twitter', 'facebook', 'threads', 'instagram', 'facebook-group'])
 
-export function PublishPanel({ draft, content }: { draft: DraftForPublish; content: string }) {
+export function PublishPanel({
+  draft,
+  content,
+  onDeleted,
+}: {
+  draft: DraftForPublish
+  content: string
+  onDeleted?: () => void
+}) {
   const [extensionOnline, setExtensionOnline] = useState(false)
   const [extensionChecked, setExtensionChecked] = useState(false)
   const [busy, setBusy] = useState<BusyState>(null)
@@ -66,6 +75,8 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
   const [openDialog, setOpenDialog] = useState<'x' | 'facebook' | 'threads' | 'instagram' | 'linkedin' | null>(null)
   const [imageRefs, setImageRefs] = useState<string[]>([])
   const [isUploadingMedia, setIsUploadingMedia] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const channelInfo = CHANNEL_LABELS[draft.channel] ?? CHANNEL_LABELS.x
   const canSchedule = SCHEDULABLE_CHANNELS.has(draft.channel)
@@ -165,6 +176,25 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
     }
   }
 
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/drafts/${draft.id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Không thể xoá bản nháp')
+      }
+      setConfirmDelete(false)
+      onDeleted?.()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <Card className="space-y-4 p-4">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -178,6 +208,9 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="ghost" disabled={busy !== null} onClick={() => setConfirmDelete(true)} aria-label="Xóa bản nháp">
+            <Trash2 className="h-4 w-4" /> Xóa
+          </Button>
           <Button size="sm" variant="primary" disabled={busy !== null} onClick={() => setOpenDialog('x')}>
             <Twitter className="h-4 w-4" /> Copy + Open X
           </Button>
@@ -269,6 +302,17 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
         channel={draft.channel}
         onClose={() => setShowScheduleModal(false)}
         onSchedule={handleSchedule}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title="Xóa bản nháp này?"
+        message="Bản nháp sẽ bị ẩn khỏi danh sách và không thể dùng để đăng hay lên lịch nữa. Dữ liệu gốc vẫn được giữ trong hệ thống."
+        confirmText="Xóa bản nháp"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
       />
     </Card>
   )

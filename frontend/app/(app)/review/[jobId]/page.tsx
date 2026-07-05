@@ -13,12 +13,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ jobId: 
 
   const { jobId } = await params
 
-  // Fetch job
   const { data: job, error: jobError } = await supabase
     .from('repurpose_jobs')
     .select('*')
     .eq('id', jobId)
     .eq('user_id', user.id)
+    .eq('is_deleted', false)
     .single()
 
   if (jobError || !job) {
@@ -29,12 +29,13 @@ export default async function ReviewPage({ params }: { params: Promise<{ jobId: 
     return <JobFailedState job={job} />
   }
 
-  // Fetch drafts
   const { data: drafts } = await supabase
     .from('drafts')
     .select('*')
     .eq('job_id', jobId)
+    .eq('user_id', user.id)
     .eq('is_current', true)
+    .eq('is_deleted', false)
 
   return <ReviewClient job={job} initialDrafts={drafts || []} />
 }

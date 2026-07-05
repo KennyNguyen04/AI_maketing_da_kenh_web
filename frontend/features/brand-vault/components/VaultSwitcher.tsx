@@ -42,6 +42,7 @@ export function VaultSwitcher() {
       const { data, error } = await supabase
         .from('brand_vaults')
         .select('id, name, display_name, is_active, created_at')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false })
 
       if (error) throw error

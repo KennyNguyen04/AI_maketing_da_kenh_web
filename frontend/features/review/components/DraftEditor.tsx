@@ -14,12 +14,14 @@ export function DraftEditor({
   draft,
   setDrafts,
   onCopied,
+  onDraftDeleted,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   draft: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setDrafts: React.Dispatch<React.SetStateAction<any[]>>
   onCopied: () => void
+  onDraftDeleted?: () => void
 }) {
   const [value, setValue] = useState(draft.content)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -123,7 +125,7 @@ export function DraftEditor({
         </div>
       </Card>
 
-      <PublishPanel draft={draft} content={value} />
+      <PublishPanel draft={draft} content={value} onDeleted={onDraftDeleted} />
       <Toast
         type={toastType}
         message={toastMessage}
