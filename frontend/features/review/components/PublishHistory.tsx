@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ExternalLink, Facebook, Loader2, Twitter, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { ExternalLink, Facebook, Loader2, RefreshCw, Twitter, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Toast } from '@/components/ui/Toast'
 
 interface PublishAttempt {
   id: string
@@ -40,38 +41,70 @@ const PROVIDER_CONFIG = {
   facebook: { icon: Facebook, label: 'Facebook', bgColor: 'bg-sky-blue' },
 }
 
+// Channels the Extension can re-post on (mirrors PublishPanel SCHEDULABLE_CHANNELS).
+// History rows from other channels (e.g. linkedin) won't show the re-post button.
+const REPOSTABLE_CHANNELS = new Set(['x', 'twitter', 'facebook', 'threads', 'instagram', 'facebook-group'])
+
 export function PublishHistory() {
   const [attempts, setAttempts] = useState<PublishAttempt[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'x' | 'facebook'>('all')
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
+  const [repostingId, setRepostingId] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
   const pageSize = 20
 
-  useEffect(() => {
-    async function loadHistory() {
-      setLoading(true)
-      try {
-        const params = new URLSearchParams({
-          limit: pageSize.toString(),
-          offset: (page * pageSize).toString(),
-        })
-        if (filter !== 'all') {
-          params.set('provider', filter)
-        }
-
-        const res = await fetch(`/api/publish/history?${params}`)
-        const data: HistoryResponse = await res.json()
-        setAttempts(data.attempts)
-        setTotal(data.total)
-      } catch (error) {
-        console.error('Failed to load history:', error)
-      } finally {
-        setLoading(false)
+  const loadHistory = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        limit: pageSize.toString(),
+        offset: (page * pageSize).toString(),
+      })
+      if (filter !== 'all') {
+        params.set('provider', filter)
       }
+
+      const res = await fetch(`/api/publish/history?${params}`)
+      const data: HistoryResponse = await res.json()
+      setAttempts(data.attempts)
+      setTotal(data.total)
+    } catch (error) {
+      console.error('Failed to load history:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadHistory()
   }, [filter, page])
+
+  async function handleRepost(draftId: string) {
+    setRepostingId(draftId)
+    try {
+      const res = await fetch(`/api/drafts/${draftId}/repost`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Re-post failed')
+      }
+      setToast({
+        type: 'success',
+        message: 'Đã xếp lại vào hàng đợi Extension. Extension sẽ đăng lại trong vài giây.',
+      })
+    } catch (error) {
+      setToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Không thể re-post.',
+      })
+    } finally {
+      setRepostingId(null)
+    }
+  }
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -91,6 +124,15 @@ export function PublishHistory() {
 
   return (
     <div className="space-y-4">
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          isVisible
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* Filter tabs */}
       <div className="flex gap-2 border-b border-app-line pb-3">
         <Button
@@ -183,19 +225,36 @@ export function PublishHistory() {
                   </div>
 
                   {/* Actions */}
-                  {attempt.external_post_url && (
-                    <a
-                      href={attempt.external_post_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0"
-                    >
-                      <Button size="sm" variant="ghost">
-                        <ExternalLink className="h-4 w-4" />
-                        Xem
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    {REPOSTABLE_CHANNELS.has(attempt.drafts?.channel) && (
+                      <Button
+                        size="sm"
+                        variant="white"
+                        disabled={repostingId !== null}
+                        onClick={() => handleRepost(attempt.drafts.id)}
+                        title="Đăng lại bài này qua Extension"
+                      >
+                        {repostingId === attempt.drafts.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                        Đăng lại
                       </Button>
-                    </a>
-                  )}
+                    )}
+                    {attempt.external_post_url && (
+                      <a
+                        href={attempt.external_post_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Button size="sm" variant="ghost">
+                          <ExternalLink className="h-4 w-4" />
+                          Xem
+                        </Button>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </Card>
             )

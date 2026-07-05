@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { ExternalLink, Facebook, Loader2, Send, Twitter, Calendar } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Calendar, ExternalLink, Facebook, Loader2, Send, Twitter, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { TimeSlotPicker } from '@/features/scheduler'
-import type { SocialAccount } from '@/lib/types'
 
 interface DraftForPublish {
   id: string
@@ -13,7 +12,7 @@ interface DraftForPublish {
   content: string
 }
 
-type BusyState = 'x' | 'facebook' | 'linkedin' | 'threads' | 'instagram' | 'schedule' | null
+type BusyState = 'x' | 'facebook' | 'linkedin' | 'threads' | 'instagram' | 'schedule' | 'post-now' | null
 
 // Map draft.channel → platform theo ngôn ngữ người dùng.
 const CHANNEL_LABELS: Record<string, { label: string; url: string; copyHint: string }> = {
@@ -58,8 +57,8 @@ const CHANNEL_LABELS: Record<string, { label: string; url: string; copyHint: str
 const SCHEDULABLE_CHANNELS = new Set(['x', 'twitter', 'facebook', 'threads', 'instagram', 'facebook-group'])
 
 export function PublishPanel({ draft, content }: { draft: DraftForPublish; content: string }) {
-  const [accounts] = useState<SocialAccount[]>([])
-  const [loadingAccounts] = useState(false)
+  const [extensionOnline, setExtensionOnline] = useState(false)
+  const [extensionChecked, setExtensionChecked] = useState(false)
   const [busy, setBusy] = useState<BusyState>(null)
   const [message, setMessage] = useState('')
   const [showScheduleModal, setShowScheduleModal] = useState(false)
@@ -70,14 +69,31 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
   const overXLimit = content.length > 280 && (draft.channel === 'x' || draft.channel === 'twitter')
 
   useEffect(() => {
-    // Accounts list no longer drives UI — kept for future use, but skip fetch to
-    // avoid showing OAuth-connection prompts that imply webapp-side publishing.
+    // /api/extension/health uses cookie auth (no Bearer) — safe to call from webapp.
+    fetch('/api/extension/health')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setExtensionOnline(Boolean(d?.connected)))
+      .catch(() => setExtensionOnline(false))
+      .finally(() => setExtensionChecked(true))
   }, [])
 
   async function copyAndOpen(key: 'x' | 'facebook' | 'threads' | 'instagram' | 'linkedin') {
     setBusy(key)
     setMessage('')
     try {
+      // Log a 'draft' row so /api/publish/history + analytics counts manual posts.
+      // Backend /api/publish/[draftId] only accepts provider ∈ ['x','facebook']; others skip.
+      if (key === 'x' || key === 'facebook') {
+        try {
+          await fetch(`/api/publish/${draft.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: key, mode: 'fallback' }),
+          })
+        } catch {
+          // Silent — analytics is best-effort.
+        }
+      }
       await navigator.clipboard.writeText(content)
       const url = CHANNEL_LABELS[key]?.url ?? channelInfo.url
       window.open(url, '_blank', 'noopener,noreferrer')
@@ -113,13 +129,39 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
     }
   }
 
+  async function handlePostNow() {
+    setBusy('post-now')
+    setMessage('')
+    try {
+      // /api/schedule/[draftId] rejects scheduledDate <= now, so add a 60s buffer.
+      // Extension polls with lte('scheduled_for', now), so it'll pick the task up immediately.
+      const scheduledFor = new Date(Date.now() + 60_000)
+      const res = await fetch(`/api/schedule/${draft.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduledFor: scheduledFor.toISOString() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to enqueue post')
+      setMessage(
+        extensionOnline
+          ? 'Đã gửi tới Extension. Extension sẽ đăng trong vài giây. Mở trang lịch sử để theo dõi.'
+          : 'Đã xếp hàng đợi (Extension đang offline). Mở Extension trên Chrome để Extension đăng ngay khi online.',
+      )
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error))
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
     <Card className="space-y-4 p-4">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-sm font-medium text-midnight-ink">Phân phối nội dung</p>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-app-muted">
-            Amplify không tự đăng lên mạng xã hội. Bạn có thể <strong>Copy + Open</strong> để dán thủ công, hoặc <strong>Lên lịch</strong> để Extension tự động đăng qua trình duyệt của bạn.
+            Amplify không tự đăng lên mạng xã hội. Bạn có thể <strong>Copy + Open</strong> để dán thủ công, <strong>Lên lịch</strong> để Extension tự động đăng, hoặc <strong>Đăng ngay</strong> qua Extension (1 click).
           </p>
           {message ? (
             <p className="mt-3 text-xs font-medium text-vibrant-orange">{message}</p>
@@ -139,6 +181,22 @@ export function PublishPanel({ draft, content }: { draft: DraftForPublish; conte
             <Button size="sm" variant="white" disabled={busy !== null} onClick={() => setShowScheduleModal(true)}>
               {busy === 'schedule' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
               Lên lịch qua Extension
+            </Button>
+          )}
+          {canSchedule && (
+            <Button
+              size="sm"
+              variant="white"
+              disabled={busy !== null || !extensionChecked}
+              onClick={handlePostNow}
+              title={
+                extensionOnline
+                  ? 'Extension sẽ đăng bài này trong vài giây'
+                  : 'Extension offline — task sẽ đợi đến khi Extension chạy lại'
+              }
+            >
+              {busy === 'post-now' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Đăng ngay qua Extension
             </Button>
           )}
         </div>
