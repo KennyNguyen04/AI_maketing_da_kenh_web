@@ -76,6 +76,24 @@ window.amplify_injected_ig = true;
     return new File([u8arr], filename, { type: mime });
   }
 
+  // See extension/automators/x.js for rationale. Same MV3 sandbox fallback.
+  function makeDataTransfer() {
+    try {
+      return new DataTransfer();
+    } catch (e) {
+      addLog('⚠️ DataTransfer unavailable in isolated world — using stub fallback');
+      const items = [];
+      return {
+        items: {
+          add: (file) => { items.push(file); },
+        },
+        get files() {
+          return items;
+        },
+      };
+    }
+  }
+
   function waitForElement(sel, timeout = 15000) {
     return new Promise(resolve => {
       const start = Date.now();
@@ -191,7 +209,7 @@ window.amplify_injected_ig = true;
     }
     if (!fileInput) throw new Error('Không tìm thấy input file');
 
-    const dt = new DataTransfer();
+    const dt = makeDataTransfer();
     files.forEach(f => dt.items.add(f));
     const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'files').set;
     if (nativeSetter) nativeSetter.call(fileInput, dt.files);

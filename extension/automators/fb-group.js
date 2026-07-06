@@ -75,6 +75,24 @@ window.amplify_injected_fb_group = true;
     return new File([u8arr], filename, {type: mime});
   }
 
+  // See extension/automators/x.js for rationale. Same MV3 sandbox fallback.
+  function makeDataTransfer() {
+    try {
+      return new DataTransfer();
+    } catch (e) {
+      addLog('⚠️ DataTransfer unavailable in isolated world — using stub fallback');
+      const items = [];
+      return {
+        items: {
+          add: (file) => { items.push(file); },
+        },
+        get files() {
+          return items;
+        },
+      };
+    }
+  }
+
   // ─── Smart element finder (từ reference) ───
   async function findSmartElement(keywords, retries = 5, allowSubstring = false, container = document) {
     for (let i = 0; i < retries; i++) {
@@ -131,7 +149,7 @@ window.amplify_injected_fb_group = true;
       addLog('⚠️ Không có ảnh — sẽ đăng text-only.');
     } else {
       addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
-      const dt = new DataTransfer();
+      const dt = makeDataTransfer();
       for (let i = 0; i < images.length; i++) {
         try {
           const res = await fetchImageViaBackground(images[i]);

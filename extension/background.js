@@ -92,9 +92,14 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
   try {
     // Inject shared anti-detect utilities first so automators can use them.
+    // `world: 'MAIN'` is required so we can construct DataTransfer in the page's
+    // own JS context. Chrome MV3 isolated worlds throw `Illegal constructor` on
+    // `new DataTransfer()` in some contexts — running in the page world gives
+    // access to the real constructor while still respecting the page's CSP.
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['lib/anti-detect.js', scriptFile]
+      files: ['lib/anti-detect.js', scriptFile],
+      world: 'MAIN',
     });
   } catch (err) {
     console.error('[Amplify] Inject failed:', err);

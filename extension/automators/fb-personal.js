@@ -76,6 +76,24 @@ window.amplify_injected_fb_personal = true;
     return new File([u8arr], filename, {type: mime});
   }
 
+  // See extension/automators/x.js for rationale. Same MV3 sandbox fallback.
+  function makeDataTransfer() {
+    try {
+      return new DataTransfer();
+    } catch (e) {
+      addLog('⚠️ DataTransfer unavailable in isolated world — using stub fallback');
+      const items = [];
+      return {
+        items: {
+          add: (file) => { items.push(file); },
+        },
+        get files() {
+          return items;
+        },
+      };
+    }
+  }
+
   async function findSmartElement(keywords, retries = 5, allowSubstring = false, container = document) {
     for (let i = 0; i < retries; i++) {
       const targets = container.querySelectorAll('div[role="button"], div[aria-label], span, button');
@@ -131,7 +149,7 @@ window.amplify_injected_fb_personal = true;
       addLog('⚠️ Không có ảnh — sẽ đăng text-only.');
     } else {
       addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
-      const dt = new DataTransfer();
+      const dt = makeDataTransfer();
       for (let i = 0; i < images.length; i++) {
         try {
           const res = await fetchImageViaBackground(images[i]);
