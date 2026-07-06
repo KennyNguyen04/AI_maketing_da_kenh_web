@@ -111,6 +111,13 @@ export async function POST(
     }
     const extChannel = channelMap[draft.channel] || draft.channel
 
+    // "Đăng ngay qua Extension" schedules for ~now+60s (server rejects past
+    // dates). Mark those urgent tasks with priority=100 so the extension
+    // bypasses its scheduled_for wait and picks them up immediately,
+    // rather than waiting 60-90s for the buffer to elapse.
+    const minutesUntilFire = (scheduledDate.getTime() - Date.now()) / 60_000
+    const isUrgent = minutesUntilFire <= 5
+
     // Tạo extension_task để Extension đọc
     const { error: extTaskError } = await supabase
       .from('extension_tasks')
@@ -124,7 +131,7 @@ export async function POST(
         target_type: 'auto',
         scheduled_for: scheduledDate.toISOString(),
         status: 'pending',
-        priority: 0
+        priority: isUrgent ? 100 : 0
       })
 
     if (extTaskError) {

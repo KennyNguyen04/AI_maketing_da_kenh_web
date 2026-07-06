@@ -60,6 +60,12 @@ export async function POST(
 
     const scheduledFor = new Date(Date.now() + 60_000).toISOString()
 
+    // priority: 100 marks "Đăng ngay qua Extension" as urgent so the
+    // extension's polling loop bypasses the scheduled_for wait and picks
+    // the task up within one poll cycle (≤30s). Without this marker the
+    // user would wait 60-90s because the API requires scheduledFor > now
+    // but the extension's `lte('scheduled_for', now)` filter blocks until
+    // that 60s buffer elapses.
     const { data: task, error: insertErr } = await supabase
       .from('extension_tasks')
       .insert({
@@ -72,9 +78,9 @@ export async function POST(
         target_type: 'auto',
         scheduled_for: scheduledFor,
         status: 'pending',
-        priority: 0,
+        priority: 100,
       })
-      .select('id, channel, scheduled_for')
+      .select('id, channel, scheduled_for, priority')
       .single()
 
     if (insertErr) {
