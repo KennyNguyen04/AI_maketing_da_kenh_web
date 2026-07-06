@@ -76,22 +76,8 @@ window.amplify_injected_fb_personal = true;
     return new File([u8arr], filename, {type: mime});
   }
 
-  // See extension/automators/x.js for rationale. Same MV3 sandbox fallback.
   function makeDataTransfer() {
-    try {
-      return new DataTransfer();
-    } catch (e) {
-      addLog('⚠️ DataTransfer unavailable in isolated world — using stub fallback');
-      const items = [];
-      return {
-        items: {
-          add: (file) => { items.push(file); },
-        },
-        get files() {
-          return items;
-        },
-      };
-    }
+    return new DataTransfer();
   }
 
   async function findSmartElement(keywords, retries = 5, allowSubstring = false, container = document) {
@@ -206,10 +192,17 @@ window.amplify_injected_fb_personal = true;
       const editorModal = document.querySelector('div[aria-modal="true"][role="dialog"]') || document;
       editor = editorModal.querySelector('[data-lexical-editor="true"], div[role="textbox"]');
       if (editor) break;
-      await sleep(500);
+      addLog(`Chưa thấy editor (lần ${i+1}/8), đợi...`);
+      await sleep(1000);
     }
 
-    if (!editor) throw new Error("Bảng đăng bài không tự bật.");
+    if (!editor) {
+      // Thử fallback: tìm bất kỳ contenteditable nào
+      editor = document.querySelector('[contenteditable="true"]');
+      if (editor) addLog(`Dùng fallback contenteditable`);
+    }
+
+    if (!editor) throw new Error("Bảng đăng bài không tự bật. Hãy đảm bảo bạn đã đăng nhập Facebook.");
 
     addLog(`Đang nạp nội dung (mô phỏng gõ tay)...`);
     editor.focus();

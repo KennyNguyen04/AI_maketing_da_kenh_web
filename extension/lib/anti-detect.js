@@ -66,8 +66,6 @@
       var ch = text[i];
 
       if (isContentEditable) {
-        // Lexical/Draft editors track selection via document.getSelection().
-        // Restoring cursor inside the editor before insertText is critical.
         var sel = window.getSelection();
         if (sel && sel.rangeCount === 0) {
           var range = document.createRange();
@@ -77,17 +75,24 @@
           sel.addRange(range);
         }
         try {
-          // Modern Chromium supports insertText on contenteditable elements.
           var ok = document.execCommand('insertText', false, ch);
           if (ok) {
             await sleep(baseMs + Math.random() * baseMs * 0.5);
             continue;
           }
-        } catch (_) { /* fall through to manual assignment */ }
+        } catch (_) { /* fall through */ }
+
+        // Keyboard event fallback — React/Lexical editors listen for keydown/keypress
+        // which trigger internal state updates even in synthetic environments.
+        var lastChar = (i === text.length - 1);
+        element.dispatchEvent(new KeyboardEvent('keydown', { key: ch, char: ch, bubbles: true, cancelable: true }));
+        element.dispatchEvent(new KeyboardEvent('keypress', { key: ch, char: ch, bubbles: true, cancelable: true }));
+        if (lastChar) {
+          element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+        }
       }
 
       // Fallback for plain <input>/<textarea>: direct value + input event.
-      // NOTE: React ignores this; only useful for non-React pages.
       try {
         element.value = (element.value || '') + ch;
         element.dispatchEvent(new Event('input', { bubbles: true }));

@@ -68,30 +68,8 @@ window.amplify_injected_x = true;
     return new File([u8arr], filename, { type: mime });
   }
 
-  // MV3 sandbox safety: `new DataTransfer()` throws `Illegal constructor` in
-  // some Chrome MV3 isolated-world content-script contexts (Chromium issue).
-  // Fall back to a minimal stub that satisfies our consumer contract
-  // (items.add + files getter). Trade-off: nativeSetter.call(input, dt.files)
-  // may receive an Array instead of a FileList, which works on Chrome ≥88 but
-  // is best-effort. The MAIN-world injection done by background.js makes this
-  // path mostly defensive.
   function makeDataTransfer() {
-    try {
-      return new DataTransfer();
-    } catch (e) {
-      addLog('⚠️ DataTransfer unavailable in isolated world — using stub fallback');
-      const items = [];
-      return {
-        items: {
-          add: (file) => { items.push(file); },
-        },
-        get files() {
-          // Returning a real FileList-like: build via Blob array is not possible
-          // here, but a plain Array of File works for most input.files setters.
-          return items;
-        },
-      };
-    }
+    return new DataTransfer();
   }
 
   function waitForElement(sel, timeout = 15000) {

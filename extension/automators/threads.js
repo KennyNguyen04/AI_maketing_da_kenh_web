@@ -76,22 +76,8 @@ window.amplify_injected_threads = true;
     return new File([u8arr], filename, { type: mime });
   }
 
-  // See extension/automators/x.js for rationale. Same MV3 sandbox fallback.
   function makeDataTransfer() {
-    try {
-      return new DataTransfer();
-    } catch (e) {
-      addLog('⚠️ DataTransfer unavailable in isolated world — using stub fallback');
-      const items = [];
-      return {
-        items: {
-          add: (file) => { items.push(file); },
-        },
-        get files() {
-          return items;
-        },
-      };
-    }
+    return new DataTransfer();
   }
 
   async function findSmartElement(keywords, retries = 5, allowSubstring = false, container = document) {
