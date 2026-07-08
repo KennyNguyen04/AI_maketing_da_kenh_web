@@ -12,6 +12,46 @@ async function getApiBase() {
   return d.api_base || 'http://localhost:3000';
 }
 
+/**
+ * Push the current posting state to any open popup so the non-blocking
+ * background banner can show progress without the user having to click.
+ *
+ * IMPORTANT: chrome.runtime.sendMessage throws synchronously when no
+ * receiver is listening (popup closed, no other extension page open).
+ * If you `await` it, that throw becomes an uncaught promise rejection
+ * and Chrome logs `Receiving end does not exist`. We use the
+ * callback-style API with a no-op callback so any throw is silenced
+ * before it can become an unhandled rejection.
+ */
+function broadcastPostState() {
+  chrome.storage.local.get(PROCESSING_KEY, (d) => {
+    try {
+      chrome.runtime.sendMessage(
+        { action: 'bgPostState', state: (d && d[PROCESSING_KEY]) || null },
+        () => {
+          // Swallow "Receiving end does not exist" when no popup is open.
+          // Reading lastError tells Chrome we handled it; otherwise Chrome
+          // logs an error for every send.
+          if (chrome.runtime.lastError) { /* expected: popup closed */ }
+        }
+      );
+    } catch (_) { /* never let broadcast kill the worker */ }
+  });
+}
+
+/**
+ * Update only the human-readable stage label on the processing record.
+ * Called by content scripts as they progress through the post flow.
+ */
+function setProcessingStage(stage) {
+  chrome.storage.local.get(PROCESSING_KEY, (d) => {
+    const cur = d && d[PROCESSING_KEY];
+    if (!cur) return;
+    cur.stage = stage;
+    chrome.storage.local.set({ [PROCESSING_KEY]: cur }, () => broadcastPostState());
+  });
+}
+
 // ─── Startup Recovery: check for orphaned tasks ───
 chrome.runtime.onInstalled.addListener(async () => {
   const stored = await chrome.storage.local.get([PROCESSING_KEY, 'currentProcessingPost']);
@@ -31,8 +71,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   console.log('[Amplify] Extension installed/updated');
 });
 
-// ─── Alarm: Poll mỗi phút ───
-chrome.alarms.create('amplifyPoll', { periodInMinutes: 1 });
+// ─── Alarm: Poll every 30s for new tasks. MV3 service workers are
+//     throttled aggressively; the 30s minimum is the lowest the API
+//     accepts and keeps queue lag below what users perceive. ───
+chrome.alarms.create('amplifyPoll', { periodInMinutes: 0.5 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'amplifyPoll') {
@@ -41,7 +83,11 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // ─── Tab Tracker with Grace Period ───
+// If the post tab closes mid-post, we keep the processing record for a
+// short grace period so the user (or a service-worker restart) can
+// re-attach. After the grace, we mark the task failed and move on.
 let tabCloseTimer = null;
+const TAB_CLOSE_GRACE_MS = 6_000; // shorter than the old 10s so we fail-fast
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const stored = await chrome.storage.local.get(PROCESSING_KEY);
@@ -49,29 +95,39 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 
   if (!processing || processing.tabId !== tabId) return;
 
-  // Clear any pending close timer
   if (tabCloseTimer) {
     clearTimeout(tabCloseTimer);
     tabCloseTimer = null;
   }
 
-  // Grace period — give user time to reconnect if they accidentally closed
   tabCloseTimer = setTimeout(async () => {
-    await chrome.storage.local.remove(PROCESSING_KEY);
     tabCloseTimer = null;
-    await updateTaskStatus(processing.id, 'failed', null, null, null, null, 'Tab closed during posting');
-    // Trigger next task
+    if (processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
+    await chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
+    broadcastPostState();
+    await updateTaskStatus(processing.id, 'failed', null, null, null, null, 'Tab đăng bài bị đóng giữa chừng');
     pollAndProcessTask();
-  }, GRACE_PERIOD_MS);
+  }, TAB_CLOSE_GRACE_MS);
 });
 
-// ─── Tab load: inject automator when tab is ready ───
+// ─── Tab load: inject automator when tab starts loading ───
+//
+// We inject at `status === 'loading'` (DOMContentLoaded equivalent) instead
+// of waiting for `status === 'complete'`. The Facebook home feed takes
+// 5-10s to fully load; the create-post card lives in the first ~500ms of
+// DOMContentLoaded. Injecting at loading lets the automator race the lazy
+// loaders rather than waiting behind them.
+//
+// IMPORTANT: anti-detect + automator must run in ISOLATED world so they
+// retain access to chrome.* APIs (storage, runtime.sendMessage) that the
+// automator relies on for fetchImage and task completion. DataTransfer /
+// ClipboardEvent / execCommand also work in ISOLATED.
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   const stored = await chrome.storage.local.get(PROCESSING_KEY);
   const processing = stored[PROCESSING_KEY];
 
   if (!processing || processing.tabId !== tabId) return;
-  if (changeInfo.status !== 'complete') return;
+  if (changeInfo.status !== 'loading') return;
   if (!tab.url) return;
 
   const isSupported = [
@@ -79,6 +135,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   ].some(host => tab.url.includes(host));
 
   if (!isSupported) return;
+
+  // Avoid double-injection if the tab navigates (e.g. login redirect).
+  if (processing.injected) {
+    return;
+  }
 
   const scriptMap = {
     'facebook-group': 'automators/fb-group.js',
@@ -91,19 +152,23 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   const scriptFile = scriptMap[processing.channel] || 'automators/fb-personal.js';
 
   try {
-    // Inject shared anti-detect utilities first so automators can use them.
-    // `world: 'MAIN'` is required so we can construct DataTransfer in the page's
-    // own JS context. Chrome MV3 isolated worlds throw `Illegal constructor` on
-    // `new DataTransfer()` in some contexts — running in the page world gives
-    // access to the real constructor while still respecting the page's CSP.
+    // Inject anti-detect + debugger-driver + automator into ISOLATED world.
+    // - anti-detect.js: pre-patches page APIs (CDP detection evasion).
+    // - debugger-driver.js: chrome.debugger wrapper that lets the automator
+    //   send real keyboard events to the tab. Used by fb-personal.js to
+    //   trigger the "press P to compose" shortcut — DOM KeyboardEvents
+    //   don't reach FB's shortcut handler.
+    // - <scriptFile>: per-channel automator.
     await chrome.scripting.executeScript({
       target: { tabId },
-      files: ['lib/anti-detect.js', scriptFile],
-      world: 'MAIN',
+      files: ['lib/anti-detect.js', 'lib/debugger-driver.js', scriptFile],
     });
+    processing.injected = true;
+    await chrome.storage.local.set({ [PROCESSING_KEY]: processing });
   } catch (err) {
     console.error('[Amplify] Inject failed:', err);
-    await chrome.storage.local.remove(PROCESSING_KEY);
+    if (processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
+    await chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
     await updateTaskStatus(processing.id, 'failed', null, null, null, null, 'Script injection failed: ' + err.message);
     pollAndProcessTask();
   }
@@ -148,13 +213,33 @@ async function pollAndProcessTask() {
     }
 
     const now = Date.now();
-    const pending = tasks.filter(t => !t.scheduled_for || new Date(t.scheduled_for).getTime() <= now);
+    // Tasks marked urgent (priority >= 100) bypass the scheduled_for wait.
+    // The webapp's "Đăng ngay qua Extension" sets scheduled_for = now+60s
+    // (because /api/schedule rejects past dates) but priority=100 to signal
+    // "user wants this NOW". Without this bypass users waited 60-90s for
+    // the buffer to elapse before the first poll cycle would pick the
+    // task up — totaling 2-3 minutes from click to composer modal.
+    const pending = tasks.filter(t => {
+      const scheduledAt = t.scheduled_for ? new Date(t.scheduled_for).getTime() : 0;
+      const isUrgent = (t.priority || 0) >= 100;
+      return isUrgent || !scheduledAt || scheduledAt <= now;
+    });
 
     if (pending.length === 0) {
       const next = tasks[0];
       await chrome.storage.local.set({ nextTaskTime: next.scheduled_for });
       return;
     }
+
+    // Sort: urgent first (highest priority), then earliest scheduled_for.
+    pending.sort((a, b) => {
+      const pa = (a.priority || 0);
+      const pb = (b.priority || 0);
+      if (pa !== pb) return pb - pa;
+      const sa = a.scheduled_for ? new Date(a.scheduled_for).getTime() : 0;
+      const sb = b.scheduled_for ? new Date(b.scheduled_for).getTime() : 0;
+      return sa - sb;
+    });
 
     await processTask(pending[0]);
   } catch (error) {
@@ -206,20 +291,31 @@ async function processTask(task) {
   }
 
   const platformUrls = {
-    'facebook': 'https://www.facebook.com',
+    // Facebook does not expose a stable /compose/post URL for personal feed;
+    // we open the home page and click the "Tạo bài viết" card to open the
+    // modal composer.
+    'facebook': 'https://www.facebook.com/',
     'facebook-group': `https://www.facebook.com/groups/${task.target_id}`,
     'threads': 'https://www.threads.net',
     'instagram': 'https://www.instagram.com',
     'x': 'https://x.com/compose/post',
   };
 
-  const url = platformUrls[task.channel] || 'https://www.facebook.com';
+  const url = platformUrls[task.channel] || 'https://www.facebook.com/';
 
-  const tab = await chrome.tabs.create({ url, active: true });
+  // Decide foreground vs background. Default = background (don't steal focus).
+  // User can toggle off via the popup switch — that flag is in storage.
+  const stored = await chrome.storage.local.get('backgroundMode');
+  const runInBackground = stored.backgroundMode !== false && task.background !== false;
+  const tab = await chrome.tabs.create({ url, active: !runInBackground });
 
   // Keep both keys in sync: PROCESSING_KEY for background, currentProcessingPost for automators.
   await chrome.storage.local.set({
-    [PROCESSING_KEY]: { id: task.id, channel: task.channel, tabId: tab.id, retryCount: 0 },
+    [PROCESSING_KEY]: {
+      id: task.id, channel: task.channel, tabId: tab.id, retryCount: 0,
+      stage: 'Đang mở trang đăng…', background: runInBackground,
+      startedAt: Date.now()
+    },
     currentProcessingPost: {
       id: task.id,
       content: task.content,
@@ -230,7 +326,28 @@ async function processTask(task) {
     }
   });
 
-  console.log(`[Amplify] Processing task ${task.id} on ${task.channel} in tab ${tab.id}`);
+  // Notify popup (if open) that we're posting in the background.
+  broadcastPostState();
+
+  // Watchdog: if the automator doesn't finish within 90s, fail the task
+  // so the queue keeps moving. Common cause: Lexical editor never accepted
+  // text and the automator is stuck in its find-editor loop.
+  if (processTask._watchdog) clearTimeout(processTask._watchdog);
+  processTask._watchdog = setTimeout(async () => {
+    const cur = await chrome.storage.local.get(PROCESSING_KEY);
+    if (cur[PROCESSING_KEY] && cur[PROCESSING_KEY].id === task.id) {
+      console.warn(`[Amplify] Watchdog: task ${task.id} stuck >90s, marking failed.`);
+      await chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
+      broadcastPostState();
+      await updateTaskStatus(
+        task.id, 'failed', null, null, null, null,
+        'Timeout: automator không hoàn thành trong 90s (thường do editor không nhận text).'
+      );
+      pollAndProcessTask();
+    }
+  }, 90_000);
+
+  console.log(`[Amplify] Processing task ${task.id} on ${task.channel} in tab ${tab.id} (background=${runInBackground})`);
 }
 
 // ─── Phase 3.3: Continue a pending preview after user confirmed ───
@@ -307,14 +424,24 @@ async function retryTask(taskId) {
 // ─── Message handler from automators ───
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'postCompleted') {
-    chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
-    updateTaskStatus(message.postId, 'completed', message.resultUrl, message.actorUrl, message.actorName, message.targetName)
-      .then(() => pollAndProcessTask());
+    if (processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
+    chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']).then(() => {
+      broadcastPostState();
+      updateTaskStatus(message.postId, 'completed', message.resultUrl, message.actorUrl, message.actorName, message.targetName)
+        .then(() => pollAndProcessTask());
+    });
     sendResponse({ ok: true });
 
   } else if (message.action === 'postFailed') {
-    chrome.storage.local.remove('currentProcessingPost');
-    handlePostFailed(message).catch(err => console.error('[Amplify] handlePostFailed error:', err));
+    if (!message.willRetry && processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
+    chrome.storage.local.remove('currentProcessingPost').then(async () => {
+      await handlePostFailed(message);
+      // Only clear PROCESSING_KEY on terminal failure so retries can re-use the same tab.
+      if (!message.willRetry) {
+        await chrome.storage.local.remove(PROCESSING_KEY);
+        broadcastPostState();
+      }
+    });
     sendResponse({ ok: true });
 
   } else if (message.action === 'fetchImage') {
@@ -376,6 +503,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   } else if (message.action === 'log') {
     chrome.storage.local.set({ lastStatus: message.msg });
+  } else if (message.action === 'setBackgroundMode') {
+    chrome.storage.local.set({ backgroundMode: !!message.value }).then(() => sendResponse({ ok: true }));
+    return true; // keep channel open for async sendResponse
+  } else if (message.action === 'getBackgroundState') {
+    chrome.storage.local.get(PROCESSING_KEY).then((d) => {
+      sendResponse({ state: d[PROCESSING_KEY] || null });
+    });
+    return true;
+  } else if (message.action === 'bgPostStage' && sender.tab) {
+    // Content script reporting progress — update stage label and re-broadcast.
+    chrome.storage.local.get(PROCESSING_KEY, (d) => {
+      const cur = d && d[PROCESSING_KEY];
+      if (!cur || cur.tabId !== sender.tab.id) return;
+      cur.stage = message.stage || cur.stage;
+      chrome.storage.local.set({ [PROCESSING_KEY]: cur }, () => {
+        // broadcastPostState uses callback-style sendMessage to avoid
+        // "Receiving end does not exist" when no popup is open.
+        broadcastPostState();
+      });
+    });
+
+  } else if (message.action === 'navigateTab' && sender.tab) {
+    // Navigate the calling tab to a new URL. Used as a fallback for
+    // when the FB home feed refuses to open the composer via any click
+    // path — `/composer/` is the same destination that clicking
+    // "Tạo bài viết" would have routed to, just initiated directly.
+    const url = message.url;
+    if (typeof url !== 'string' || !/^https?:\/\//.test(url)) {
+      sendResponse({ ok: false, error: 'Invalid URL' });
+      return;
+    }
+    chrome.tabs.update(sender.tab.id, { url }, () => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ ok: true });
+      }
+    });
+    return true;
+
+  } else if (message.scope === 'debugger' && sender.tab) {
+    // RPC from content-side lib/debugger-driver.js. We can only attach to
+    // the tab the content script lives in. The service worker holds the
+    // chrome.debugger session for the lifetime of one withDebugger() call.
+    handleDebuggerRpc(message.action, message, sender.tab.id, sendResponse);
+    return true; // keep channel open
   }
 });
 
@@ -392,6 +565,141 @@ async function handlePostFailed(message) {
     await updateTaskStatus(message.postId, 'failed', null, null, null, null, message.error || 'Unknown error');
     pollAndProcessTask();
   }
+}
+
+// ─── Debugger RPC ──────────────────────────────────────────────────────
+// chrome.debugger is only available in the service worker. The content
+// script calls into here via runtime.sendMessage with scope='debugger'.
+// One attach() per withDebugger() envelope; detach is best-effort.
+//
+// Track which tab each withDebugger() call is attached to so multiple
+// concurrent calls (shouldn't happen, but defensive) don't fight over the
+// same debuggee.
+const DEBUGGER_TARGETS = new Set(); // tabIds currently attached
+
+async function handleDebuggerRpc(action, message, tabId, sendResponse) {
+  try {
+    if (action === 'attach') {
+      if (DEBUGGER_TARGETS.has(tabId)) {
+        // Already attached by a previous call in this SW lifetime — reuse.
+        sendResponse({ ok: true, result: { reused: true } });
+        return;
+      }
+      await attachDebugger(tabId);
+      DEBUGGER_TARGETS.add(tabId);
+      sendResponse({ ok: true, result: { attached: true } });
+      return;
+    }
+    if (action === 'detach') {
+      if (DEBUGGER_TARGETS.has(tabId)) {
+        try { await detachDebugger(tabId); } catch (_) {/* swallow */}
+        DEBUGGER_TARGETS.delete(tabId);
+      }
+      sendResponse({ ok: true, result: { detached: true } });
+      return;
+    }
+    if (action === 'pressKey') {
+      const desc = message.desc || {};
+      await dispatchKey(tabId, desc);
+      sendResponse({ ok: true, result: { sent: true } });
+      return;
+    }
+    if (action === 'insertText') {
+      await sendDebugger(tabId, 'Input.insertText', { text: message.text || '' });
+      sendResponse({ ok: true, result: { sent: true } });
+      return;
+    }
+    if (action === 'mouseClick') {
+      // Emulate the exact sequence a real mouse produces:
+      //   1. mouseMoved (so the page's mousemove handlers fire and the
+      //      element gets :hover/:focus-within styles, which FB's React
+      //      onPointerEnter needs to attach pointer listeners)
+      //   2. mousePressed with pointerType='mouse' (gives isPrimary=true
+      //      and pointerType='mouse', which FB's anti-bot checks)
+      //   3. mouseReleased (closes the gesture, fires the click event)
+      const { x, y, button = 'left', clickCount = 1 } = message;
+      await sendDebugger(tabId, 'Input.dispatchMouseEvent', {
+        type: 'mouseMoved', x, y, button, buttons: 0,
+      });
+      await sendDebugger(tabId, 'Input.dispatchMouseEvent', {
+        type: 'mousePressed', x, y, button, clickCount, buttons: 1,
+        pointerType: 'mouse',
+      });
+      await sendDebugger(tabId, 'Input.dispatchMouseEvent', {
+        type: 'mouseReleased', x, y, button, clickCount, buttons: 0,
+        pointerType: 'mouse',
+      });
+      sendResponse({ ok: true, result: { sent: true } });
+      return;
+    }
+    sendResponse({ ok: false, error: 'Unknown debugger action: ' + action });
+  } catch (e) {
+    sendResponse({ ok: false, error: e.message || String(e) });
+  }
+}
+
+function attachDebugger(tabId) {
+  return new Promise((resolve, reject) => {
+    chrome.debugger.attach({ tabId }, '1.3', () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message || 'attach failed'));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+function detachDebugger(tabId) {
+  return new Promise((resolve) => {
+    chrome.debugger.detach({ tabId }, () => {
+      if (chrome.runtime.lastError) {/* expected when not attached */}
+      resolve();
+    });
+  });
+}
+
+function sendDebugger(tabId, method, params) {
+  return new Promise((resolve, reject) => {
+    chrome.debugger.sendCommand({ tabId }, method, params || {}, (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message || 'sendCommand failed'));
+      } else {
+        resolve(result);
+      }
+    });
+  });
+}
+
+async function dispatchKey(tabId, desc) {
+  const modifiers = desc.shift ? 8 : 0; // 8 = Shift in CDP modifier bitmask
+  // rawKeyDown: triggers FB's "press P to compose" shortcut handler.
+  await sendDebugger(tabId, 'Input.dispatchKeyEvent', {
+    type: 'rawKeyDown',
+    key: desc.key,
+    code: desc.code,
+    windowsVirtualKeyCode: desc.vk,
+    nativeVirtualKeyCode: desc.vk,
+    modifiers,
+  });
+  if (desc.text !== undefined && desc.text !== '') {
+    await sendDebugger(tabId, 'Input.dispatchKeyEvent', {
+      type: 'char',
+      key: desc.key,
+      code: desc.code,
+      text: desc.text,
+      unmodifiedText: desc.text,
+      modifiers,
+    });
+  }
+  await sendDebugger(tabId, 'Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: desc.key,
+    code: desc.code,
+    windowsVirtualKeyCode: desc.vk,
+    nativeVirtualKeyCode: desc.vk,
+    modifiers,
+  });
 }
 
 // ─── Update task status on backend ───

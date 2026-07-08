@@ -131,11 +131,16 @@ window.amplify_injected_fb_group = true;
       images = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch(e) {}
 
+    // Declare dt in outer scope so the file-upload step below can check dt.files.length
+    // (was previously declared only inside the `else` block, throwing `dt is not defined`
+    // when the post had no images).
+    let dt = null;
+
     if (images.length === 0) {
       addLog('⚠️ Không có ảnh — sẽ đăng text-only.');
     } else {
       addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
-      const dt = makeDataTransfer();
+      dt = makeDataTransfer();
       for (let i = 0; i < images.length; i++) {
         try {
           const res = await fetchImageViaBackground(images[i]);
@@ -176,7 +181,7 @@ window.amplify_injected_fb_group = true;
     addLog(`Đang tìm khay chứa ảnh ẩn...`);
     let activeModal = document.querySelector('div[aria-modal="true"][role="dialog"]') || document;
     let fileInput = null;
-    if (dt.files.length > 0) {
+    if (dt && dt.files.length > 0) {
       fileInput = activeModal.querySelector('input[type="file"][accept*="image"], input[type="file"][accept*="video"]');
 
       if (!fileInput) {

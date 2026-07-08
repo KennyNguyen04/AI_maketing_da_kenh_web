@@ -15,6 +15,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let nextTaskTimeGlobal = null;
 
+  // ─── Status snapshot cache ───
+  //
+  // Reading chrome.storage.local from the popup forces the service worker
+  // to wake, which adds 200-1500ms of latency on every popup open (and on
+  // every 1s tick of the interval below). We mirror the most recent render
+  // state to chrome.storage.session — an in-memory only store that's
+  // accessible across popup open/close within the same browser session
+  // without any SW round trip. The popup renders from the snapshot first
+  // (instant), then refreshes from storage.local in the background. Only
+  // the *background* (service worker) writes the snapshot, so the popup
+  // can trust it as the extension's last known state.
+  const SNAPSHOT_KEY = 'statusSnapshot';
+
   // ─── Load saved data ───
   const stored = await chrome.storage.local.get(['api_token', 'api_base']);
 
@@ -29,14 +42,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     showMainUI();
   }
 
-  // ─── Poll for live status updates + pendingPreview ───
-  setInterval(async () => {
-    const d = await chrome.storage.local.get([
-      'currentProcessingPost', 'lastStatus', 'nextTaskTime', 'outOfCredits',
-      'isPaused', 'pendingPreview', 'tokenExpired'
-    ]);
+  // Read last-known state synchronously from session storage. This is the
+  // hot-path that removes "Đang tải trạng thái..." — the popup already
+  // knows what it was displaying before it was last closed.
+  try {
+    const snap = await chrome.storage.session.get(SNAPSHOT_KEY);
+    if (snap && snap[SNAPSHOT_KEY]) {
+      applyRender(snap[SNAPSHOT_KEY]);
+    }
+  } catch (_) {
+    // chrome.storage.session is MV3 only and graceful when missing.
+  }
 
-    // Token expired — show reconnect banner.
+  // Pull the latest from chrome.storage.local in the background. This is
+  // authoritative but slow; only used to update the cache, not to delay
+  // the first paint.
+  refreshFromStorage();
+
+  // ─── Status rendering ───
+  //
+  // render state comes from a single object so we can both (a) apply it to
+  // the DOM and (b) snapshot it back to chrome.storage.session for next
+  // popup open. Apply this when storage.local changes (via broadcast) or
+  // when the timer ticks for "next task time" countdown.
+  function applyRender(d) {
+    if (!d) return;
+
     if (d.tokenExpired) {
       statusIcon.textContent = '🔑';
       statusTitle.textContent = 'Token hết hạn';
@@ -44,10 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusDetail.textContent = d.lastStatus || 'Vui lòng kết nối lại.';
       statusDetail.style.color = '#dc2626';
       setConnected(false, '❌ Token hết hạn');
+      cacheSnapshot(d);
       return;
     }
 
-    // Pending preview takes priority over normal status.
     if (d.pendingPreview) {
       showPreviewSection(d.pendingPreview);
     } else {
@@ -62,12 +93,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusTitle.style.color = '#ef4444';
       statusDetail.innerHTML = '<span style="font-weight:500;">Hệ thống đã dừng đăng bài.</span><br/>Vui lòng nạp thêm điểm để tiếp tục.';
       statusDetail.style.color = '#dc2626';
-      if (document.getElementById('pauseBtn')) document.getElementById('pauseBtn').style.display = 'none';
+      const pb = document.getElementById('pauseBtn'); if (pb) pb.style.display = 'none';
+      cacheSnapshot(d);
       return;
     }
 
-    if (document.getElementById('pauseBtn')) document.getElementById('pauseBtn').style.display = '';
-    if (document.getElementById('scanBtn')) document.getElementById('scanBtn').style.display = '';
+    const pb = document.getElementById('pauseBtn'); if (pb) pb.style.display = '';
+    const sb = document.getElementById('scanBtn'); if (sb) sb.style.display = '';
 
     if (d.currentProcessingPost) {
       const p = d.currentProcessingPost;
@@ -85,49 +117,103 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusTitle.style.color = '#059669';
       statusDetail.textContent = d.lastStatus || 'Khởi động...';
       statusDetail.style.color = '#374151';
-    } else {
-      if (d.isPaused) {
-        statusIcon.textContent = '⏸';
-        statusTitle.textContent = 'Hệ thống tạm dừng';
-        statusTitle.style.color = '#ef4444';
-        statusDetail.textContent = 'Bấm Tiếp tục để quét bài lại.';
-        statusDetail.style.color = '#dc2626';
-        return;
-      }
-
-      if (nextTaskTimeGlobal) {
-        const nextTimeMs = new Date(nextTaskTimeGlobal).getTime();
-        const diffS = Math.floor((nextTimeMs - Date.now()) / 1000);
-
-        if (diffS > 0) {
-          const m = Math.floor(diffS / 60);
-          const s = diffS % 60;
-          const timeStr = `${m > 0 ? m + 'p ' : ''}${s}s`;
-          const targetTimeStr = new Date(nextTimeMs).toLocaleTimeString('vi-VN', {
-            hour: '2-digit', minute: '2-digit'
-          });
-
-          statusIcon.textContent = '⏳';
-          statusTitle.textContent = `Chờ bài lúc ${targetTimeStr}`;
-          statusTitle.style.color = '#0284c7';
-          statusDetail.textContent = `Hệ thống sẽ chạy tiếp trong khoảng ${timeStr}.`;
-          statusDetail.style.color = '#6b7280';
-        } else {
-          statusIcon.textContent = '⏳';
-          statusTitle.textContent = `Đang quét bài mới...`;
-          statusTitle.style.color = '#0284c7';
-          statusDetail.textContent = 'Đã đến giờ đăng bài. Đang chờ hệ thống...';
-          statusDetail.style.color = '#6b7280';
-        }
-      } else {
-        statusIcon.textContent = '⏸';
-        statusTitle.textContent = `Chưa có lịch đăng`;
-        statusTitle.style.color = '#6b7280';
-        statusDetail.textContent = 'Sẽ quét lại tự động sau ~1 phút.';
-        statusDetail.style.color = '#9ca3af';
-      }
+      cacheSnapshot(d);
+      return;
     }
-  }, 1000);
+
+    if (d.isPaused) {
+      statusIcon.textContent = '⏸';
+      statusTitle.textContent = 'Hệ thống tạm dừng';
+      statusTitle.style.color = '#ef4444';
+      statusDetail.textContent = 'Bấm Tiếp tục để quét bài lại.';
+      statusDetail.style.color = '#dc2626';
+      cacheSnapshot(d);
+      return;
+    }
+
+    if (nextTaskTimeGlobal) {
+      const nextTimeMs = new Date(nextTaskTimeGlobal).getTime();
+      const diffS = Math.floor((nextTimeMs - Date.now()) / 1000);
+
+      if (diffS > 0) {
+        const m = Math.floor(diffS / 60);
+        const s = diffS % 60;
+        const timeStr = `${m > 0 ? m + 'p ' : ''}${s}s`;
+        const targetTimeStr = new Date(nextTimeMs).toLocaleTimeString('vi-VN', {
+          hour: '2-digit', minute: '2-digit'
+        });
+
+        statusIcon.textContent = '⏳';
+        statusTitle.textContent = `Chờ bài lúc ${targetTimeStr}`;
+        statusTitle.style.color = '#0284c7';
+        statusDetail.textContent = `Hệ thống sẽ chạy tiếp trong khoảng ${timeStr}.`;
+        statusDetail.style.color = '#6b7280';
+      } else {
+        statusIcon.textContent = '⏳';
+        statusTitle.textContent = `Đang quét bài mới...`;
+        statusTitle.style.color = '#0284c7';
+        statusDetail.textContent = 'Đã đến giờ đăng bài. Đang chờ hệ thống...';
+        statusDetail.style.color = '#6b7280';
+      }
+      cacheSnapshot(d);
+      return;
+    }
+
+    statusIcon.textContent = '✓';
+    statusTitle.textContent = `Sẵn sàng`;
+    statusTitle.style.color = '#6b7280';
+    statusDetail.textContent = 'Extension đang chờ việc. Quét lại sau mỗi ~1 phút.';
+    statusDetail.style.color = '#9ca3af';
+    cacheSnapshot(d);
+  }
+
+  function cacheSnapshot(d) {
+    // Best-effort write — chrome.storage.session may be unavailable in some
+    // MV2 fallback modes, but errors here just mean the next popup open
+    // will fetch from storage.local again. No functional loss.
+    try {
+      chrome.storage.session.set({ [SNAPSHOT_KEY]: d });
+    } catch (_) { /* graceful */ }
+  }
+
+  async function refreshFromStorage() {
+    const d = await chrome.storage.local.get([
+      'currentProcessingPost', 'lastStatus', 'nextTaskTime', 'outOfCredits',
+      'isPaused', 'pendingPreview', 'tokenExpired'
+    ]);
+    applyRender({
+      currentProcessingPost: d.currentProcessingPost,
+      lastStatus: d.lastStatus,
+      nextTaskTime: d.nextTaskTime,
+      outOfCredits: d.outOfCredits,
+      isPaused: d.isPaused,
+      pendingPreview: d.pendingPreview,
+      tokenExpired: d.tokenExpired,
+    });
+  }
+
+  // ─── Event-driven updates ───
+  //
+  // Background broadcasts 'bgPostState' on every storage change. We listen
+  // for those and refresh instantly, removing the 1s polling lag. We still
+  // keep a slower interval (3s) for the countdown timer ('Chờ bài lúc …')
+  // which needs to tick continuously.
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (!msg) return;
+    if (msg.action === 'bgPostState') {
+      // Force refresh from storage.local — the actual data is there, not
+      // in the broadcast payload (background sends only the changed ref).
+      refreshFromStorage();
+    }
+  });
+
+  // 3-second tick is enough to update the countdown text. The status only
+  // changes when the background fires bgPostState (start/end of task), so
+  // polling chrome.storage.local every 1s was burning IPC budget for no
+  // visible change. Storage.session still gets the latest on every tick.
+  setInterval(() => {
+    refreshFromStorage();
+  }, 3000);
 
   // ─── Tab switching ───
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -160,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       apiBase,
       apiBase.replace(':3001', ':3000'),
       apiBase.replace(':3000', ':3001'),
-      'https://amplify-eight-drab.vercel.app',
+      'https://amplify-kenny-dev.vercel.app/',
       'http://localhost:3001',
       'http://localhost:3000',
     ];
@@ -218,6 +304,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  // ─── Background mode toggle (persisted to storage, read by background.js) ───
+  const bgToggle = document.getElementById('bg-mode-toggle');
+  if (bgToggle) {
+    chrome.storage.local.get('backgroundMode', (d) => {
+      bgToggle.checked = d.backgroundMode !== false; // default ON
+    });
+    bgToggle.addEventListener('change', async () => {
+      await chrome.storage.local.set({ backgroundMode: bgToggle.checked });
+      // Re-broadcast to background SW so the in-flight task also adopts the new mode.
+      chrome.runtime.sendMessage({ action: 'setBackgroundMode', value: bgToggle.checked });
+    });
+  }
+
+  // ─── Background banner: listen for processing events from SW ───
+  const banner = document.getElementById('bg-banner');
+  const bannerTitle = document.getElementById('bg-banner-title');
+  const bannerSub = document.getElementById('bg-banner-sub');
+  const bannerSwitch = document.getElementById('bg-banner-switch');
+
+  function showBgBanner(state) {
+    if (!banner) return;
+    if (state && state.tabId) {
+      banner.style.display = 'flex';
+      const channel = state.channel || 'facebook';
+      bannerTitle.textContent = `Đang đăng lên ${channel}…`;
+      bannerSub.textContent = state.stage || 'Bạn có thể tiếp tục làm việc, đăng nền tự động.';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  bannerSwitch?.addEventListener('click', async () => {
+    const d = await chrome.storage.local.get('amplifyProcessing');
+    if (d.amplifyProcessing && d.amplifyProcessing.tabId) {
+      chrome.tabs.update(d.amplifyProcessing.tabId, { active: true });
+    }
+  });
+
+  // Initial load: show banner if extension already mid-post when popup opens.
+  chrome.storage.local.get('amplifyProcessing', (d) => {
+    if (d.amplifyProcessing) showBgBanner(d.amplifyProcessing);
+  });
+
+  // Listen for live updates from background script.
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.action === 'bgPostState') {
+      showBgBanner(msg.state);
+    }
+  });
+
   // ─── Pause/Resume ───
   const pauseBtn = document.getElementById('pauseBtn');
   if (pauseBtn) {
@@ -267,9 +403,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       chrome.runtime.sendMessage({ action: 'cancelPreview', taskId });
     });
   }
-
-  // ─── Settings: load on first show ───
-  await loadSettingsUI();
 
   // ─── Save rate-limit / preview buttons ───
   document.getElementById('saveLimitsBtn')?.addEventListener('click', saveRateLimits);
@@ -336,7 +469,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const res = await fetch(`${apiBase}/api/extension/status`, { headers });
       if (!res.ok) return;
-
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) return;
       const json = await res.json();
       if (statPending) statPending.textContent = json.pending_tasks ?? 0;
       if (statCompletedToday) statCompletedToday.textContent = json.completed_today ?? 0;
@@ -403,6 +537,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return out;
   }
 
+  // ─── Settings: load on first show ───
+  // Must run AFTER CHANNEL_LABELS is declared above, otherwise renderRateLimits()
+  // (called transitively from loadSettingsUI → renderRateLimits) hits TDZ on
+  // the const and throws ReferenceError.
+  await loadSettingsUI();
+
   async function saveRateLimits() {
     const btn = document.getElementById('saveLimitsBtn');
     if (!btn) return;
@@ -426,10 +566,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.innerHTML = '<div style="font-size:11px;color:#9ca3af;text-align:center;padding:12px;">Chưa kết nối.</div>';
         return;
       }
-      const res = await fetch(`${api_base}/api/extension/recent-drafts?limit=20`, {
+      const res = await fetch(`${api_base}/api/extension/repost?limit=20`, {
         headers: { 'Authorization': `Bearer ${api_token}` },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        container.innerHTML = '<div style="font-size:11px;color:#9ca3af;text-align:center;padding:12px;">Dữ liệu không khả dụng.</div>';
+        return;
+      }
       const json = await res.json();
       const drafts = json.drafts || [];
       if (drafts.length === 0) {
@@ -471,9 +615,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         headers: { 'Authorization': `Bearer ${api_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ draft_id: draftId, channels: [channel] }),
       });
+      const contentType = res.headers.get('content-type') || '';
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        alert(`Đăng lại thất bại: ${err.error || res.status}`);
+        let errMsg = `HTTP ${res.status}`;
+        if (contentType.includes('application/json')) {
+          const err = await res.json().catch(() => ({}));
+          errMsg = err.error || errMsg;
+        }
+        alert(`Đăng lại thất bại: ${errMsg}`);
         return;
       }
       chrome.runtime.sendMessage({ action: 'forceScan' });
@@ -498,7 +647,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch(`${api_base}/api/extension/settings`, {
         headers: { 'Authorization': `Bearer ${api_token}` },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.warn('loadSettingsUI: non-ok response', res.status);
+        return;
+      }
+      // Guard against HTML/error pages masquerading as JSON
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        console.warn('loadSettingsUI: non-JSON response, skipping');
+        return;
+      }
       const json = await res.json();
       renderRateLimits(json.rate_limits || {});
       const toggle = document.getElementById('autoPreviewToggle');

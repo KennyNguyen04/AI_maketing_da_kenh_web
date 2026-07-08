@@ -7,12 +7,13 @@
     "storage",
     "alarms",
     "tabs",
-    "scripting"
+    "scripting",
+    "debugger"
   ],
   "host_permissions": [
     "http://localhost:3000/*",
     "http://localhost:3001/*",
-    "https://amplify-eight-drab.vercel.app/*",
+    "https://amplify-kenny-dev.vercel.app/*",
     "https://www.facebook.com/*",
     "https://www.instagram.com/*",
     "https://x.com/*",
@@ -32,16 +33,11 @@
   },
   "content_scripts": [
     {
-      "js": ["content/inject.js"],
+      "js": ["content/inject.js", "lib/boostrap.js"],
       "matches": [
         "https://www.facebook.com/*",
         "https://www.instagram.com/*",
-        "https://x.com/*",
-        "https://twitter.com/*",
-        "https://www.threads.net/*",
-        "http://localhost:3000/*",
-        "http://localhost:3001/*",
-        "https://amplify-eight-drab.vercel.app/*"
+        "https://www.threads.net/*"
       ],
       "run_at": "document_start"
     }

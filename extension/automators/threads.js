@@ -131,11 +131,16 @@ window.amplify_injected_threads = true;
       images = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
     } catch (e) {}
 
+    // Declare dt in outer scope so file-upload steps can check dt.files.length
+    // (was previously only inside the `else` block, throwing `dt is not defined`
+    // for text-only posts).
+    let dt = null;
+
     if (images.length === 0) {
       addLog('⚠️ Không có ảnh — sẽ đăng text-only.');
     } else {
       addLog(`Chuẩn bị nạp ${images.length} ảnh...`);
-      const dt = makeDataTransfer();
+      dt = makeDataTransfer();
       for (let i = 0; i < images.length; i++) {
         try {
           const res = await fetchImageViaBackground(images[i]);
@@ -188,7 +193,7 @@ window.amplify_injected_threads = true;
 
     // 3. Tìm và đẩy ảnh (skip khi không có file)
     addLog(`Tìm khay chứa ảnh ẩn...`);
-    if (dt.files.length > 0) {
+    if (dt && dt.files.length > 0) {
       if (!fileInput) {
         const photoBtn = await findSmartElement(["Ảnh/video", "Photo/video", "Add Media", "Thêm file"], 3, true, activeModal);
         if (photoBtn) {

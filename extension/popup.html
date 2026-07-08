@@ -147,6 +147,56 @@
       background: white; border-radius: 4px; cursor: pointer; font-weight: 500;
     }
     .btn-channel-mini:hover { background: #f3f4f6; }
+
+    /* Background posting banner */
+    .bg-banner {
+      position: sticky; bottom: 0; left: 0; right: 0;
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-top: 1px solid #6ee7b7;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+      z-index: 10;
+    }
+    .bg-banner-icon {
+      font-size: 18px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 0.7; }
+    }
+    .bg-banner-text { flex: 1; min-width: 0; }
+    .bg-banner-title { font-size: 12px; font-weight: 600; color: #065f46; }
+    .bg-banner-sub { font-size: 10px; color: #047857; margin-top: 2px; }
+    .bg-banner-action {
+      width: 28px; height: 28px; padding: 0;
+      background: white; border: 1px solid #6ee7b7;
+      border-radius: 6px; cursor: pointer; font-size: 14px;
+      color: #047857; font-weight: 700;
+    }
+    .bg-banner-action:hover { background: #ecfdf5; }
+
+    /* Toggle switch (background mode toggle) */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid #f3f4f6;
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 12px; color: #374151; font-weight: 500; flex: 1; }
+    .toggle-hint { font-size: 10px; color: #9ca3af; display: block; margin-top: 2px; }
+    .switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #d1d5db; border-radius: 20px; transition: 0.2s;
+    }
+    .slider::before {
+      position: absolute; content: ""; height: 16px; width: 16px;
+      left: 2px; bottom: 2px; background: white; border-radius: 50%; transition: 0.2s;
+    }
+    .switch input:checked + .slider { background: #6366f1; }
+    .switch input:checked + .slider::before { transform: translateX(16px); }
   </style>
 </head>
 <body>
@@ -167,7 +217,7 @@
     </div>
     <div id="token-input-group" style="margin-top:10px;">
       <label>API URL:</label>
-      <input type="text" id="api-url" placeholder="https://amplify-eight-drab.vercel.app" value="https://amplify-eight-drab.vercel.app">
+      <input type="text" id="api-url" placeholder="https://amplify-kenny-dev.vercel.app/" value="https://amplify-kenny-dev.vercel.app/">
       <label style="margin-top:8px;">API Token:</label>
       <input type="password" id="token" placeholder="Dán token từ trang Amplify...">
       <button class="btn btn-primary" id="saveBtn">Lưu &amp; Kết nối</button>
@@ -175,10 +225,10 @@
   </div>
 
   <!-- Unified Status -->
-  <div class="section" id="status-section" style="display:none;">
-    <div class="status-icon" id="status-icon">⏳</div>
-    <div class="status-title" id="status-title">Đang tải trạng thái...</div>
-    <div class="status-detail" id="status-detail">Vui lòng chờ...</div>
+  <div class="section" id="status-section">
+    <div class="status-icon" id="status-icon">✓</div>
+    <div class="status-title" id="status-title">Sẵn sàng</div>
+    <div class="status-detail" id="status-detail">Extension đang chờ việc.</div>
     <div class="btn-row">
       <button class="btn btn-ghost btn-pause" id="pauseBtn">⏸ Tạm dừng</button>
       <button class="btn btn-ghost btn-scan" id="scanBtn">🚀 Quét Ngay</button>
@@ -204,9 +254,34 @@
     </div>
   </div>
 
+  <!-- Posting options -->
+  <div class="section" id="options-section">
+    <div class="section-title">⚡ Tùy chọn đăng</div>
+    <div class="toggle-row">
+      <div>
+        <span class="toggle-label">🪄 Chạy nền (không chuyển tab)</span>
+        <span class="toggle-hint">Mở Facebook ở tab nền, bạn vẫn dùng Chrome bình thường.</span>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="bg-mode-toggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
   <!-- Footer -->
   <div style="text-align:center;font-size:11px;color:#9ca3af;padding:12px;line-height:1.6;">
     Amplify Auto Poster · Auto Post AI Content
+  </div>
+
+  <!-- Background posting banner (non-blocking) -->
+  <div class="bg-banner" id="bg-banner" style="display:none;">
+    <div class="bg-banner-icon">🟢</div>
+    <div class="bg-banner-text">
+      <div class="bg-banner-title" id="bg-banner-title">Đang đăng ở tab nền…</div>
+      <div class="bg-banner-sub" id="bg-banner-sub">Bạn có thể tiếp tục làm việc. Mở tab Amplify khi xong.</div>
+    </div>
+    <button class="bg-banner-action" id="bg-banner-switch" title="Mở tab đang đăng">↗</button>
   </div>
 
   <!-- Preview Section (shown when pendingPreview exists) -->
