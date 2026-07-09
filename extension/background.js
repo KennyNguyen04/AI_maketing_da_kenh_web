@@ -425,10 +425,10 @@ async function retryTask(taskId) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'postCompleted') {
     if (processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
-    chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']).then(() => {
+    chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']).then(async () => {
       broadcastPostState();
-      updateTaskStatus(message.postId, 'completed', message.resultUrl, message.actorUrl, message.actorName, message.targetName)
-        .then(() => pollAndProcessTask());
+      await updateTaskStatus(message.postId, 'completed', message.resultUrl, message.actorUrl, message.actorName, message.targetName);
+      await pollAndProcessTask();
     });
     sendResponse({ ok: true });
 
@@ -436,7 +436,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message.willRetry && processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
     chrome.storage.local.remove('currentProcessingPost').then(async () => {
       await handlePostFailed(message);
-      // Only clear PROCESSING_KEY on terminal failure so retries can re-use the same tab.
       if (!message.willRetry) {
         await chrome.storage.local.remove(PROCESSING_KEY);
         broadcastPostState();

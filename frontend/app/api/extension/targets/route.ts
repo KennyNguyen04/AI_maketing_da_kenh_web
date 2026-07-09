@@ -7,7 +7,11 @@ export async function GET(request: Request) {
     const userId = await verifyToken(request.headers.get('Authorization'))
     if (!userId) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
-    const { data: targets } = await supabaseAdmin.from('social_targets').select('*').eq('user_id', userId).eq('is_active', true)
+    const { data: targets } = await supabaseAdmin
+      .from('social_targets')
+      .select('id, channel, target_id, target_type, name, url, description, member_count, is_active, auto_post_enabled, schedule, created_at, updated_at')
+      .eq('user_id', userId)
+      .eq('is_active', true)
 
     return NextResponse.json({ targets: targets || [] })
   } catch (error) {

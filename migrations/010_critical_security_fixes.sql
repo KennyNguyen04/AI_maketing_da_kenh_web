@@ -24,6 +24,9 @@ DROP POLICY IF EXISTS "Enable insert for all users" ON public.api_keys;
 DROP POLICY IF EXISTS "Enable update for all users" ON public.api_keys;
 DROP POLICY IF EXISTS "Enable delete for all users" ON public.api_keys;
 DROP POLICY IF EXISTS "Users can view own api_keys" ON public.api_keys;
+DROP POLICY IF EXISTS "Users can insert own api_keys" ON public.api_keys;
+DROP POLICY IF EXISTS "Users can update own api_keys" ON public.api_keys;
+DROP POLICY IF EXISTS "Users can delete own api_keys" ON public.api_keys;
 DROP POLICY IF EXISTS "Users can modify own api_keys" ON public.api_keys;
 
 -- 1.2 Create strict per-user policies
