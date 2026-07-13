@@ -124,3 +124,7 @@ database/exports/
 # - README.md, KE_HOACH_*.md
 # - frontend/app, components, features, lib (source code)
 # ============================================================
+/03_TechLead_Review
+/2. Huong dan CD-KL dot T4.2026
+/_tmp
+supabase database.txt

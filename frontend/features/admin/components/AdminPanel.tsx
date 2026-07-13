@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, Loader2, RefreshCcw, Users, BarChart3, Activity, Shield } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Button } from '@/components/ui/Button'
@@ -45,14 +45,17 @@ export function AdminPanel() {
   const [loading, setLoading] = useState(true)
   const [retryingId, setRetryingId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [userDetails, setUserDetails] = useState<{ profile: Record<string, unknown>; jobs: Record<string, unknown>[]; vaults: Record<string, unknown>[] } | null>(null)
+  const [userDetailsLoading, setUserDetailsLoading] = useState(false)
   const [jobsFilter, setJobsFilter] = useState('all')
   const [jobsList, setJobsList] = useState<Record<string, unknown>[]>([])
   const [jobsTotal, setJobsTotal] = useState(0)
 
   async function load() {
     setLoading(true)
+    setError('')
     try {
       const [statsRes, usersRes, jobsRes, jobsListRes] = await Promise.all([
         fetch('/api/admin/stats'),
@@ -61,12 +64,20 @@ export function AdminPanel() {
         fetch(`/api/admin/jobs?status=${jobsFilter}`),
       ])
 
+      const failed: string[] = []
       if (statsRes.ok) {
         const statsData = await statsRes.json()
         setStats(statsData)
+      } else {
+        failed.push(`/api/admin/stats → ${statsRes.status}`)
       }
-      const usersData = await usersRes.json()
-      setUsers(usersData.users || [])
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json()
+        setUsers(usersData.users || [])
+      } else {
+        failed.push(`/api/admin/users → ${usersRes.status}`)
+      }
 
       if (jobsRes.ok) {
         const jobsData = await jobsRes.json()
@@ -77,9 +88,16 @@ export function AdminPanel() {
         const jobsListData = await jobsListRes.json()
         setJobsList(jobsListData.jobs || [])
         setJobsTotal(jobsListData.total || 0)
+      } else {
+        failed.push(`/api/admin/jobs → ${jobsListRes.status}`)
+      }
+
+      if (failed.length > 0) {
+        setError(`Một số API lỗi: ${failed.join(', ')}`)
       }
     } catch (error) {
       console.error('Error loading admin data:', error)
+      setError(error instanceof Error ? error.message : 'Không tải được dữ liệu admin')
     } finally {
       setLoading(false)
     }
@@ -87,18 +105,28 @@ export function AdminPanel() {
 
   useEffect(() => {
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobsFilter])
 
   async function loadUserDetails(userId: string) {
     setSelectedUserId(userId)
+    setUserDetailsLoading(true)
+    setError('')
     try {
       const res = await fetch(`/api/admin/users/${userId}`)
-      if (!res.ok) throw new Error('Failed to load user details')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `HTTP ${res.status}`)
+      }
       const data = await res.json()
       setUserDetails(data)
       setActiveTab('users')
     } catch (error) {
       console.error('Error loading user details:', error)
+      setError(`Không tải được chi tiết user: ${error instanceof Error ? error.message : String(error)}`)
+      setUserDetails(null)
+    } finally {
+      setUserDetailsLoading(false)
     }
   }
 
@@ -128,6 +156,7 @@ export function AdminPanel() {
   return (
     <div className="space-y-6">
       {message ? <div className="rounded-card border border-hint-of-blue bg-hint-of-blue/50 p-3 text-sm text-regal-violet">{message}</div> : null}
+      {error ? <div className="rounded-card border border-vibrant-orange/30 bg-vibrant-orange/5 p-3 text-sm text-vibrant-orange">{error}</div> : null}
 
       <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => (
@@ -146,7 +175,12 @@ export function AdminPanel() {
         ))}
       </div>
 
-      {activeTab === 'overview' && stats && (
+      {activeTab === 'overview' && (
+        loading ? (
+          <Card className="p-6 text-sm text-app-muted">Đang tải dữ liệu tổng quan...</Card>
+        ) : !stats ? (
+          <Card className="p-6 text-sm text-vibrant-orange">Không tải được thống kê. Vui lòng thử lại.</Card>
+        ) : (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="p-4">
@@ -208,6 +242,7 @@ export function AdminPanel() {
             </div>
           </Card>
         </div>
+        )
       )}
 
       {activeTab === 'users' && (
@@ -219,7 +254,13 @@ export function AdminPanel() {
             </a>
           </div>
 
-          {selectedUserId && userDetails && (
+          {selectedUserId && userDetailsLoading && (
+            <Card className="space-y-3 border-primary/40 bg-primary/5 p-5 text-sm text-app-muted">
+              Đang tải chi tiết user...
+            </Card>
+          )}
+
+          {selectedUserId && userDetails && !userDetailsLoading && (
             <Card className="space-y-3 border-primary/40 bg-primary/5 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -227,6 +268,7 @@ export function AdminPanel() {
                     {(userDetails.profile.full_name as string) || (userDetails.profile.email as string) || 'Unknown user'}
                   </p>
                   <p className="text-xs text-app-muted">{(userDetails.profile.email as string) || ''}</p>
+                  <p className="mt-1 text-xs text-app-muted">ID: <span className="font-mono">{(userDetails.profile.id as string) || selectedUserId}</span></p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => { setSelectedUserId(null); setUserDetails(null) }}>Đóng</Button>
               </div>
@@ -240,6 +282,19 @@ export function AdminPanel() {
                   <p className="mt-1 text-sm text-midnight-ink">{Array.isArray(userDetails.vaults) ? userDetails.vaults.length : 0} vaults</p>
                 </div>
               </div>
+              {Array.isArray(userDetails.jobs) && userDetails.jobs.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-app-muted">Job list (top 20)</p>
+                  <ul className="space-y-1 text-xs text-dark-charcoal">
+                    {(userDetails.jobs as Array<{ id: string; status: string; title?: string | null }>).slice(0, 5).map((j) => (
+                      <li key={j.id} className="flex justify-between gap-2">
+                        <span className="truncate">{j.title || 'Untitled'}</span>
+                        <Tag label={j.status} color={j.status === 'failed' ? 'red' : j.status === 'done' ? 'green' : 'blue'} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </Card>
           )}
 
@@ -304,6 +359,7 @@ export function AdminPanel() {
                 <thead className="border-b border-app-line bg-app-bg text-xs uppercase tracking-wide text-app-muted">
                   <tr>
                     <th className="px-4 py-3 font-medium">Title</th>
+                    <th className="px-4 py-3 font-medium">User</th>
                     <th className="px-4 py-3 font-medium">Source</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Created</th>
@@ -311,14 +367,17 @@ export function AdminPanel() {
                 </thead>
                 <tbody className="divide-y divide-app-line">
                   {loading ? (
-                    <tr><td colSpan={4} className="px-4 py-6 text-app-muted">Đang tải dữ liệu...</td></tr>
+                    <tr><td colSpan={5} className="px-4 py-6 text-app-muted">Đang tải dữ liệu...</td></tr>
                   ) : jobsList.length === 0 ? (
-                    <tr><td colSpan={4} className="px-4 py-6 text-app-muted">Không có job nào.</td></tr>
+                    <tr><td colSpan={5} className="px-4 py-6 text-app-muted">Không có job nào.</td></tr>
                   ) : jobsList.map((job) => (
                     <tr key={job.id as string} className="hover:bg-app-bg">
                       <td className="px-4 py-3">
                         <p className="font-medium text-midnight-ink">{(job.title as string) || 'Untitled'}</p>
-                        <p className="text-xs text-app-muted">{job.user_id as string}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-dark-charcoal">{(job.user_name as string) || (job.user_email as string) || '—'}</p>
+                        <p className="text-xs font-mono text-app-muted">{job.user_id as string}</p>
                       </td>
                       <td className="px-4 py-3 text-dark-charcoal">{(job.source_type as string) || '-'}</td>
                       <td className="px-4 py-3">
