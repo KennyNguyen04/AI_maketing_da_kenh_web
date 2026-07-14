@@ -42,6 +42,15 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      {
+        // Extension download — short cache so version bumps show up
+        // quickly, but long enough to absorb burst retries on flaky networks.
+        source: '/downloads/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=300, must-revalidate' },
+          { key: 'Content-Disposition', value: 'attachment' },
+        ],
+      },
     ]
   },
 }

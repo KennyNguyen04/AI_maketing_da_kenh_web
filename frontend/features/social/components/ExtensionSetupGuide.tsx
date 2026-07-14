@@ -24,9 +24,23 @@ interface ExtensionStatus {
   completed_today?: number
 }
 
+interface ExtensionInfo {
+  version: string
+  name: string
+  min_browser: string
+  build_channel: string
+  built_at: string
+}
+
+// Self-hosted on Vercel via /public/downloads. Bumped automatically each
+// time we ship a new extension build (see scripts/build-extension-zip.ps1).
+const DOWNLOAD_URL = '/downloads/Amplify_extension.zip'
+const INFO_URL = '/downloads/extension-info.json'
+
 export function ExtensionSetupGuide() {
   const [status, setStatus] = useState<ExtensionStatus>({ connected: false, lastCheck: null })
   const [checking, setChecking] = useState(false)
+  const [info, setInfo] = useState<ExtensionInfo | null>(null)
 
   async function checkExtensionStatus() {
     setChecking(true)
@@ -43,6 +57,23 @@ export function ExtensionSetupGuide() {
     setChecking(false)
   }
 
+
+  // Fetch build info on mount. Served from /public so it changes whenever
+  // we ship a new zip — no API key or auth required.
+  useEffect(() => {
+    let cancelled = false
+    fetch(INFO_URL, { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setInfo(data)
+      })
+      .catch(() => {
+        // Silent — version display is non-critical.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     checkExtensionStatus()
@@ -79,7 +110,7 @@ export function ExtensionSetupGuide() {
     {
       icon: Zap,
       title: 'Kết nối',
-      description: 'Mở extension popup, nhập API URL và click kết nối',
+      description: 'Bấm "🔗 Liên kết ngay" ở trên — token sẽ tự động được gửi cho Extension',
     },
   ]
 
@@ -144,15 +175,25 @@ export function ExtensionSetupGuide() {
           <div className="mb-6 rounded-card border border-sky-blue/20 bg-sky-blue/5 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-midnight-ink">Bước 1: Tải Extension về máy</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-midnight-ink">Bước 1: Tải Extension về máy</p>
+                  {info?.version && (
+                    <span className="rounded-badge bg-sky-blue/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-blue">
+                      v{info.version}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-0.5 text-xs text-app-muted">
-                  File .zip chứa toàn bộ Chrome Extension, tải về và giải nén để cài đặt
+                  File .zip chứa toàn bộ Chrome Extension, tải về và giải nén để cài đặt.
+                  {info?.built_at && (
+                    <> Cập nhật {new Date(info.built_at).toLocaleDateString('vi-VN')}.</>
+                  )}
                 </p>
               </div>
               <a
-                href="https://drive.google.com/uc?export=download&id=1UBF3x65b2kntUaGxx76GuTHP1hIdSZJv"
-                target="_blank"
-                rel="noopener noreferrer"
+                href={DOWNLOAD_URL}
+                download="Amplify_extension.zip"
+                rel="noopener"
               >
                 <Button className="shrink-0">
                   <Download className="h-4 w-4" />
