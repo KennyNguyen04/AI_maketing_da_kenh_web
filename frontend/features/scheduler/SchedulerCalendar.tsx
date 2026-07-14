@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
+import { getChannelBadgeColor } from './channel-badge'
 
 interface ScheduledPost {
   id: string
@@ -140,7 +141,8 @@ export function SchedulerCalendar({ posts, onDateClick, onPostClick, className }
                 className="w-full truncate rounded bg-app-bg p-1 text-left text-xs transition-colors hover:bg-app-line"
               >
                 <span className={cn(
-                  'mr-1 inline-block h-1.5 w-1.5 rounded-full bg-sky-blue',
+                  'mr-1 inline-block h-1.5 w-1.5 rounded-full',
+                  getChannelBadgeColor(post.channel),
                 )} />
                 {post.content.substring(0, 30)}
               </button>

@@ -59,11 +59,15 @@ export function SocialTargetsSettings() {
   async function loadTargets() {
     setLoading(true)
     try {
-      const res = await fetch('/api/extension/targets')
+      const res = await fetch('/api/social/targets')
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `HTTP ${res.status}`)
+      }
       const data = await res.json()
       setTargets(data.targets || [])
-    } catch {
-      setMessage({ type: 'error', text: 'Không thể tải danh sách target' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Không thể tải danh sách target' })
     }
     setLoading(false)
   }
@@ -83,7 +87,7 @@ export function SocialTargetsSettings() {
     setMessage(null)
 
     try {
-      const res = await fetch('/api/extension/targets', {
+      const res = await fetch('/api/social/targets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,14 +119,18 @@ export function SocialTargetsSettings() {
 
   async function handleToggleAutoPost(targetId: string, currentValue: boolean) {
     try {
-      await fetch(`/api/extension/targets/${targetId}`, {
+      const res = await fetch(`/api/social/targets/${targetId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ auto_post_enabled: !currentValue }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `HTTP ${res.status}`)
+      }
       loadTargets()
-    } catch {
-      setMessage({ type: 'error', text: 'Không thể cập nhật' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Không thể cập nhật' })
     }
   }
 
@@ -130,10 +138,14 @@ export function SocialTargetsSettings() {
     if (!confirm('Bạn có chắc muốn xóa target này?')) return
 
     try {
-      await fetch(`/api/extension/targets/${targetId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/social/targets/${targetId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `HTTP ${res.status}`)
+      }
       loadTargets()
-    } catch {
-      setMessage({ type: 'error', text: 'Không thể xóa target' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Không thể xóa target' })
     }
   }
 

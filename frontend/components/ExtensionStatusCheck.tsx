@@ -7,7 +7,21 @@ export async function ExtensionStatusCheck() {
 
   if (!user) return null
 
-  const hasToken = !!user.user_metadata?.api_token_hash
+  // Check api_keys table directly (authoritative source for "has token").
+  // Falls back to user_metadata.has_api_token if table query fails for any reason.
+  let hasToken = false
+  try {
+    const { data } = await supabase
+      .from('api_keys')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+    hasToken = !!data
+  } catch {
+    hasToken = !!user.user_metadata?.has_api_token
+  }
+
   const isRegistered = user.user_metadata?.extension_registered === true
 
   return (

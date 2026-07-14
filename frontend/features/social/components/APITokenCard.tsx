@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Key, Copy, RefreshCw, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
+import { Key, Copy, RefreshCw, Eye, EyeOff, CheckCircle2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export function APITokenCard() {
   const [token, setToken] = useState<string | null>(null)
@@ -15,6 +16,9 @@ export function APITokenCard() {
   const [hasToken, setHasToken] = useState(false)
   const [isNew, setIsNew] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmRevoke, setConfirmRevoke] = useState(false)
+  const [revoking, setRevoking] = useState(false)
+  const [revokeMessage, setRevokeMessage] = useState<string | null>(null)
 
   useEffect(() => {
     loadExistingToken()
@@ -75,6 +79,29 @@ export function APITokenCard() {
     await navigator.clipboard.writeText(token)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function revokeToken() {
+    setRevoking(true)
+    setError(null)
+    setRevokeMessage(null)
+    try {
+      const res = await fetch('/api/user/api-token', { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || 'Không thể thu hồi token')
+      }
+      setToken(null)
+      setHasToken(false)
+      setIsNew(false)
+      setShowToken(false)
+      setConfirmRevoke(false)
+      setRevokeMessage('Đã thu hồi token. Extension đang dùng token cũ sẽ ngừng hoạt động ngay lập tức.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể thu hồi token')
+    } finally {
+      setRevoking(false)
+    }
   }
 
   return (
@@ -180,10 +207,10 @@ export function APITokenCard() {
                 </ol>
               </div>
 
-              <div className="pt-2 border-t border-app-bg">
+              <div className="pt-2 border-t border-app-bg space-y-2">
                 <Button
                   onClick={generateToken}
-                  disabled={loading}
+                  disabled={loading || revoking}
                   variant="outline"
                   className="w-full sm:w-auto border-forest-fern/40 text-forest-fern hover:bg-forest-fern/10"
                 >
@@ -199,10 +226,29 @@ export function APITokenCard() {
                     </>
                   )}
                 </Button>
-                <p className="mt-2 text-xs text-sunset-orange">
+                <p className="text-xs text-sunset-orange">
                   Tạo lại sẽ vô hiệu hóa token hiện tại. Extension đang dùng token cũ sẽ ngừng hoạt động.
                 </p>
+
+                <Button
+                  onClick={() => setConfirmRevoke(true)}
+                  disabled={loading || revoking}
+                  variant="outline"
+                  className="w-full sm:w-auto border-vibrant-orange/40 text-vibrant-orange hover:bg-vibrant-orange/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Thu hồi token
+                </Button>
+                <p className="text-xs text-vibrant-orange">
+                  Thu hồi sẽ xóa vĩnh viễn token hiện tại. Bạn sẽ cần tạo token mới để dùng Extension.
+                </p>
               </div>
+
+              {revokeMessage ? (
+                <div className="rounded-card bg-forest-fern/10 border border-forest-fern/25 p-3">
+                  <p className="text-xs font-medium text-forest-fern">{revokeMessage}</p>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="space-y-4">
@@ -232,6 +278,20 @@ export function APITokenCard() {
           )}
         </div>
       </Card>
+
+      <ConfirmDialog
+        isOpen={confirmRevoke}
+        title="Thu hồi API token?"
+        message="Token sẽ bị xóa vĩnh viễn và Chrome Extension đang kết nối sẽ ngừng hoạt động ngay lập tức. Bạn sẽ cần tạo token mới nếu muốn dùng Extension trở lại."
+        confirmText="Thu hồi vĩnh viễn"
+        variant="danger"
+        loading={revoking}
+        onConfirm={revokeToken}
+        onCancel={() => {
+          setConfirmRevoke(false)
+          setError(null)
+        }}
+      />
     </motion.div>
   )
 }

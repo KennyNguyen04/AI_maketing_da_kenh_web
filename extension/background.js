@@ -434,11 +434,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   } else if (message.action === 'postFailed') {
     if (!message.willRetry && processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
+    // P0-4 hardening: wrap the async fire-and-forget chain in try/catch.
+    // The .then() callback runs detached from the message channel — without
+    // a catch, an unhandled rejection would silently kill retry logic and
+    // the next poll cycle would see the task stuck in 'processing' forever.
     chrome.storage.local.remove('currentProcessingPost').then(async () => {
-      await handlePostFailed(message);
-      if (!message.willRetry) {
-        await chrome.storage.local.remove(PROCESSING_KEY);
-        broadcastPostState();
+      try {
+        await handlePostFailed(message);
+        if (!message.willRetry) {
+          await chrome.storage.local.remove(PROCESSING_KEY);
+          broadcastPostState();
+        }
+      } catch (e) {
+        console.error('[Amplify] postFailed handler crashed:', e);
+        // Best-effort cleanup so the queue keeps moving even if handlePostFailed throws.
+        if (!message.willRetry) {
+          try { await chrome.storage.local.remove(PROCESSING_KEY); } catch (_) {}
+          broadcastPostState();
+        }
       }
     });
     sendResponse({ ok: true });
@@ -487,6 +500,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // async response
 
   } else if (message.action === 'forceScan') {
+    // MUT-style resync: reset any tasks whose worker died (status=processing
+    // older than 5 minutes) back to pending BEFORE we poll. Without this, a
+    // stale processing task would block the queue forever — the next poll
+    // sees it as "already claimed" and skips it.
+    const local = await chrome.storage.local.get(['api_token', 'api_base']);
+    if (local.api_token && local.api_base) {
+      try {
+        const res = await fetch(`${local.api_base}/api/extension/resync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${local.api_token}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.reset_count > 0) {
+            console.log(`[Amplify] Resync: reset ${data.reset_count} stale processing task(s) → pending`);
+            // Surface to popup so user sees "🔄 Reset N task kẹt" within 30s.
+            await chrome.storage.local.set({
+              lastResync: { at: Date.now(), resetCount: data.reset_count },
+            });
+          }
+        }
+      } catch (e) {
+        // Best-effort: resync failure shouldn't block the manual scan.
+        console.warn('[Amplify] resync call failed:', e.message);
+      }
+    }
     chrome.storage.local.remove(PROCESSING_KEY).then(() => pollAndProcessTask());
     sendResponse({ success: true });
 

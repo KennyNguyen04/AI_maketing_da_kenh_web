@@ -201,7 +201,7 @@ export function PublishPanel({
         <div>
           <p className="text-sm font-medium text-midnight-ink">Phân phối nội dung</p>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-app-muted">
-            Amplify không tự đăng lên mạng xã hội. Bạn có thể <strong>Copy + Open</strong> để dán thủ công, <strong>Lên lịch</strong> để Extension tự động đăng, hoặc <strong>Đăng ngay</strong> qua Extension (1 click).
+            Amplify không tự đăng lên mạng xã hội. Bạn có thể <strong>Copy + Open</strong> để dán thủ công, <strong>Lên lịch</strong> để Extension tự động đăng, hoặc <strong>Đăng ngay</strong> qua Extension (Extension sẽ đăng trong &lt;60s — giữ tab này mở).
           </p>
           {message ? (
             <p className="mt-3 text-xs font-medium text-vibrant-orange">{message}</p>
@@ -236,7 +236,7 @@ export function PublishPanel({
                 isUploadingMedia
                   ? 'Đang tải ảnh lên, vui lòng đợi...'
                   : extensionOnline
-                  ? 'Extension sẽ đăng bài này trong vài giây'
+                  ? 'Extension sẽ đăng bài này trong vài giây — giữ tab này mở'
                   : 'Extension offline — task sẽ đợi đến khi Extension chạy lại'
               }
             >

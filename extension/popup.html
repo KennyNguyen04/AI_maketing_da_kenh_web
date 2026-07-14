@@ -197,6 +197,15 @@
     }
     .switch input:checked + .slider { background: #6366f1; }
     .switch input:checked + .slider::before { transform: translateX(16px); }
+
+    /* Header logout button */
+    .btn-logout {
+      background: transparent; border: 1px solid #fca5a5; color: #dc2626;
+      font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer;
+      margin-left: 8px;
+    }
+    .btn-logout:hover { background: #fee2e2; }
+    .btn-logout:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -206,6 +215,7 @@
     <span class="header-icon">🤖</span>
     <span class="header-title">Amplify Auto Poster</span>
     <span class="header-version">v1.0.0</span>
+    <button class="btn-logout" id="logoutBtn" title="Đăng xuất và xóa token" style="display:none;">Đăng xuất</button>
   </div>
 
   <!-- Token section -->

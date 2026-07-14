@@ -3,6 +3,18 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { verifyToken } from '../_auth'
 import { encryptToken } from '@/lib/social/crypto'
 
+/**
+ * GET/PUT /api/extension/credentials
+ *
+ * Read/write encrypted OAuth tokens for social_targets rows. Currently the
+ * extension does not call this endpoint — it relies on browser session
+ * cookies (X/Facebook login state) for browser automation. The route is
+ * retained for a planned future OAuth refresh flow where the extension
+ * would need server-stored tokens to refresh expiring access tokens.
+ *
+ * Auth: Bearer API token (verified via api_keys table hash).
+ * Uses service-role client because Bearer-token requests have no Supabase session.
+ */
 export async function GET(request: Request) {
   try {
     const userId = await verifyToken(request.headers.get('Authorization'))

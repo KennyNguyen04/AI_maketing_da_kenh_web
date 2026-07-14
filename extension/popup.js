@@ -159,10 +159,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    // Show "🔄 Reset N task kẹt" badge for 30s after a resync found stuck tasks.
+    // Stored by background.js after POST /api/extension/resync returns ok with
+    // reset_count > 0. Rendered as part of the idle state so user sees the
+    // recovery happen without having to dig into console logs.
+    let resyncNote = '';
+    if (d.lastResync && d.lastResync.at && d.lastResync.resetCount > 0) {
+      const ageMs = Date.now() - d.lastResync.at;
+      if (ageMs < 30_000) {
+        resyncNote = ` · 🔄 Reset ${d.lastResync.resetCount} task kẹt`;
+      } else {
+        // Stale — clear it so future renders don't keep showing it forever.
+        chrome.storage.local.remove('lastResync');
+      }
+    }
+
     statusIcon.textContent = '✓';
     statusTitle.textContent = `Sẵn sàng`;
     statusTitle.style.color = '#6b7280';
-    statusDetail.textContent = 'Extension đang chờ việc. Quét lại sau mỗi ~1 phút.';
+    statusDetail.textContent = `Extension đang chờ việc. Quét lại sau mỗi ~1 phút.${resyncNote}`;
     statusDetail.style.color = '#9ca3af';
     cacheSnapshot(d);
   }
@@ -179,7 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function refreshFromStorage() {
     const d = await chrome.storage.local.get([
       'currentProcessingPost', 'lastStatus', 'nextTaskTime', 'outOfCredits',
-      'isPaused', 'pendingPreview', 'tokenExpired'
+      'isPaused', 'pendingPreview', 'tokenExpired', 'lastResync'
     ]);
     applyRender({
       currentProcessingPost: d.currentProcessingPost,
@@ -189,6 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       isPaused: d.isPaused,
       pendingPreview: d.pendingPreview,
       tokenExpired: d.tokenExpired,
+      lastResync: d.lastResync,
     });
   }
 
@@ -294,6 +310,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Lưu & Kết nối';
   });
+
+  // ─── Logout (revoke + clear) ───
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    // Show button only when a token is saved.
+    const updateLogoutVisibility = () => {
+      chrome.storage.local.get(['api_token'], (d) => {
+        logoutBtn.style.display = d.api_token ? 'inline-block' : 'none';
+      });
+    };
+    updateLogoutVisibility();
+
+    logoutBtn.addEventListener('click', async () => {
+      if (!confirm('Đăng xuất sẽ xóa token và ngừng tự động đăng bài. Bạn có chắc?')) return;
+      logoutBtn.disabled = true;
+      const { api_token, api_base } = await chrome.storage.local.get(['api_token', 'api_base']);
+      if (api_token) {
+        try {
+          await fetch(`${api_base}/api/extension/register`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${api_token}` }
+          });
+        } catch (e) {
+          // Best-effort — server cleanup may fail but local clear still proceeds.
+          console.warn('Logout: server unregister failed', e);
+        }
+      }
+      await chrome.storage.local.clear();
+      // Reset UI
+      setConnected(false, 'Đã đăng xuất');
+      const statsSection = document.getElementById('stats-section');
+      if (statsSection) statsSection.style.display = 'none';
+      logoutBtn.style.display = 'none';
+      tokenInput.value = '';
+      logoutBtn.disabled = false;
+    });
+  }
 
   // ─── Force scan ───
   document.getElementById('scanBtn')?.addEventListener('click', () => {
