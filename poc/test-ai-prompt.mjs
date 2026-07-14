@@ -164,7 +164,7 @@ async function testGemini(sampleText) {
     const startTime = Date.now()
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite',
       contents: VOICE_ANALYSIS_PROMPT + sampleText,
     })
 

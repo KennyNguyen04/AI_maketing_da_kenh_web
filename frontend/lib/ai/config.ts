@@ -124,7 +124,7 @@ export function getGenerationConfig(channel: string): GenerationConfig {
 /**
  * Voice analysis config - deterministic for consistent results.
  * maxTokens increased from 1024 to 4096 because `system_prompt_cache` alone can
- * easily exceed 500 tokens and Gemini 2.5 Flash would otherwise truncate the
+ * easily exceed 500 tokens and the model would otherwise truncate the
  * JSON mid-string, causing parse failures on Vercel.
  */
 export const VOICE_ANALYSIS_CONFIG: GenerationConfig = {

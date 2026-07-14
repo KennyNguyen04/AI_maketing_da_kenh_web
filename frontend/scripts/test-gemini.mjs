@@ -11,13 +11,13 @@ const ai = new GoogleGenAI({ apiKey })
 const startedAt = Date.now()
 try {
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.1-flash-lite',
     contents: 'hello gemini',
   })
   const elapsedMs = Date.now() - startedAt
   console.log(JSON.stringify({
     ok: true,
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.1-flash-lite',
     text: response.text,
     usage: response.usageMetadata,
     elapsedMs,
