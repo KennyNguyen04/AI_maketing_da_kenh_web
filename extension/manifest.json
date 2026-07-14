@@ -13,7 +13,8 @@
   "host_permissions": [
     "http://localhost:3000/*",
     "http://localhost:3001/*",
-    "https://amplify-kenny-dev.vercel.app/*",
+    "https://amplifyhd.tech/*",
+    "https://www.amplifyhd.tech/*",
     "https://www.facebook.com/*",
     "https://www.instagram.com/*",
     "https://x.com/*",
