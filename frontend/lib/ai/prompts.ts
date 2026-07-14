@@ -9,6 +9,9 @@
  *     - Độ dài điều chỉnh theo platform norms 2026 (sweet-spot engagement, không phải ceiling).
  *     - Thêm "good vs avoid" examples cụ thể để AI bám sát pattern thay vì checklist khô.
  *     - Cho phép persona override một số ràng buộc channel (giọng văn là trên hết).
+ *   - 15jul: đồng bộ 'twitter' (id form gửi) với 'x' (id code dùng) — cùng prompt
+ *     để tránh tình trạng "X chỉ có 1 dòng" do form gửi 'twitter' mà prompt mới
+ *     chỉ redesign cho 'x'.
  *
  * Updated 14jul 2026:
  *   - length floor ≥ 150 từ cho FB/Instagram/LinkedIn (user yêu cầu)
@@ -134,13 +137,39 @@ Mỗi câu ≥ 8 từ, tối thiểu 3 đoạn văn.
 1-3 hashtag ở cuối (viết HOA hoặc PascalCase).
 Tránh ngôn ngữ quá bán hàng — group members ghét quảng cáo lộ liễu.`,
 
-  'twitter': `Yêu cầu:
-Viết một tweet ngắn dưới 280 ký tự.
-Hook mạnh, một insight duy nhất.
-Có thể dùng emoji một cách có chọn lọc (1-2 emoji)
-Không hashtag hoặc tối đa 1 hashtag
-Thoại tự nhiên, không quá formal`,
+  // 'twitter' và 'x' là cùng 1 channel — form chọn 'twitter' (label 'X'),
+  // prompt + config giống nhau để draft chuẩn 70-130 chars theo persona.
+  'twitter': `Nguyên tắc cao nhất: GIỌNG VĂN TÁC GIẢ là trên hết. X là "personality contest" — cùng 1 thông điệp có thể viết 10 cách khác nhau theo 10 persona. Hãy theo persona đến chữ cuối.
 
+Viết 1 X post (single tweet, không phải thread) dựa trên bài viết gốc.
+
+### ĐỘ DÀI (tính theo KÝ TỰ, không phải từ)
+- Tối đa 280 ký tự (giới hạn cứng của X).
+- Sweet-spot 70-130 ký tự — engagement cao nhất rơi vào khoảng này, vì feed X đọc theo "shooting glance" không theo chiều dọc.
+- Nếu nội dung thật sự phức tạp và persona cho phép dài hơn, có thể lên 200-260 ký tự — nhưng phải có 1 punchline mạnh ở cuối.
+
+### CẤU TRÚC
+- 1 insight duy nhất (không nhồi).
+- Hook ở đầu: 5-10 ký tự đầu quyết định người đọc có dừng cuộn hay không.
+- Nếu dùng emoji, chỉ 1-2 cái, đặt ở hook hoặc punchline.
+
+### PATTERNS NÊN DÙNG
+- Format "đảo ngược": câu đầu chốt insight, giải thích ngắn sau.
+- Format "listicle thu nhỏ": gom 3-4 thứ vào 1 dòng phân cách dấu "•" hoặc "→".
+- Format "contrarian": đi ngược số đông, nhưng đừng quá clickbait.
+- Format "story hook": mở đầu bằng 1 câu chuyện cá nhân rồi rút insight.
+
+### PATTERNS NÊN TRÁNH
+- KHÔNG bắt đầu bằng "Tôi nghĩ", "Theo tôi", "Bạn có biết".
+- KHÔNG kết thúc bằng "Thoughts?" hoặc "Agree?" (lazy).
+- KHÔNG hashtag nếu persona không phải dạng broadcast / corporate.
+- KHÔNG bullet-list nhiều dòng — X đọc rất tệ với whitespace dọc.
+
+### VÍ DỤ MẪU (không copy, chỉ tham khảo)
+- "Hot take: Bạn không cần content calendar. Bạn cần 3 bài đủ tốt mỗi tuần. Calendar là để tự lừa mình rằng mình 'đang làm content'."
+- "Mình đã viết 500 bài LinkedIn. Bài hay nhất? Bài 7 từ. Hay nhất = ngắn nhất."`,
+
+  // Giữ 'x' như alias ổn định cho DB/code gọi trực tiếp; nội dung y hệt 'twitter'.
   'x': `Nguyên tắc cao nhất: GIỌNG VĂN TÁC GIẢ là trên hết. X là "personality contest" — cùng 1 thông điệp có thể viết 10 cách khác nhau theo 10 persona. Hãy theo persona đến chữ cuối.
 
 Viết 1 X post (single tweet, không phải thread) dựa trên bài viết gốc.

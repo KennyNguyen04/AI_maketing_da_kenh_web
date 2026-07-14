@@ -19,6 +19,10 @@ export interface GenerationConfig {
  *   - instagram: maxTokens 2500→3500 (caption dài hơn)
  *   - linkedin_post: maxTokens 2000→3500 (200-400 từ + 2-3 insight)
  *   - thêm facebook-group + threads (automator có sẵn, trước đó fallback default)
+ *
+ * Updated 15jul 2026:
+ *   - thêm 'twitter' alias cùng config với 'x' (NewJobForm gửi id='twitter' nhưng
+ *     prompt + config giờ y hệt 'x' để draft chuẩn 70-130 chars theo persona)
  */
 export const AI_GENERATION_CONFIG: Record<string, GenerationConfig> = {
   // LinkedIn single post - balanced creativity and coherence
@@ -63,6 +67,15 @@ export const AI_GENERATION_CONFIG: Record<string, GenerationConfig> = {
 
   // X (Twitter) - concise, witty, controlled randomness
   x: {
+    temperature: 0.6,
+    maxTokens: 500,
+    topP: 0.9,
+    topK: 20,
+  },
+
+  // Alias 'twitter' → cùng config với 'x' (form chọn label "X" với id 'twitter',
+  // nhưng prompt + config phải đồng nhất để draft chuẩn 70-130 chars).
+  twitter: {
     temperature: 0.6,
     maxTokens: 500,
     topP: 0.9,
