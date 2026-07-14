@@ -162,14 +162,53 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ['lib/anti-detect.js', 'lib/debugger-driver.js', scriptFile],
+      world: 'ISOLATED', // explicit for MV3 best practice
     });
     processing.injected = true;
+    processing.injectAttempts = 0; // reset retry counter khi inject OK
     await chrome.storage.local.set({ [PROCESSING_KEY]: processing });
   } catch (err) {
+    // 14jul 2026: phân loại error để tránh mark task FAILED do race condition
+    // (tab navigate/close trước khi executeScript xong).
+    const msg = String(err?.message || err);
+    const isRaceCondition =
+      msg.includes('Frame with ID') ||
+      msg.includes('No frame with id') ||
+      msg.includes('Cannot access contents of the page') ||
+      msg.includes('Receiving end does not exist');
+
+    processing.injectAttempts = (processing.injectAttempts || 0) + 1;
+    const tooManyRetries = processing.injectAttempts > 5;
+
+    if (isRaceCondition && !tooManyRetries) {
+      // Tab navigated/closed during execution. Retry on next onUpdated
+      // (status === 'loading') thay vì fail task.
+      console.warn(`[Amplify] Inject skipped (race, attempt ${processing.injectAttempts}):`, msg);
+      processing.injected = false;
+      await chrome.storage.local.set({ [PROCESSING_KEY]: processing });
+      return;
+    }
+
+    if (isRaceCondition && tooManyRetries) {
+      // User liên tục close tab — fail task để không loop vô hạn.
+      console.error('[Amplify] Inject failed after 5 retries');
+      if (processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
+      await chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
+      await updateTaskStatus(
+        processing.id, 'failed', null, null, null, null,
+        'Tab liên tục bị đóng hoặc navigate (5 lần). Vui lòng thử lại sau.'
+      );
+      broadcastPostState();
+      pollAndProcessTask();
+      return;
+    }
+
+    // Hard error (file not found, permission denied, CSP): mark failed ngay.
     console.error('[Amplify] Inject failed:', err);
     if (processTask._watchdog) { clearTimeout(processTask._watchdog); processTask._watchdog = null; }
     await chrome.storage.local.remove([PROCESSING_KEY, 'currentProcessingPost']);
-    await updateTaskStatus(processing.id, 'failed', null, null, null, null, 'Script injection failed: ' + err.message);
+    await updateTaskStatus(processing.id, 'failed', null, null, null, null, 'Script injection failed: ' + msg);
+    broadcastPostState();
     pollAndProcessTask();
   }
 });
@@ -303,11 +342,11 @@ async function processTask(task) {
 
   const url = platformUrls[task.channel] || 'https://www.facebook.com/';
 
-  // Decide foreground vs background. Default = background (don't steal focus).
-  // User can toggle off via the popup switch — that flag is in storage.
-  const stored = await chrome.storage.local.get('backgroundMode');
-  const runInBackground = stored.backgroundMode !== false && task.background !== false;
-  const tab = await chrome.tabs.create({ url, active: !runInBackground });
+// BG-mode always on (per 14jul spec).
+// User muốn tab đăng bài mở ở background để không steal focus.
+// Original: const runInBackground = stored.backgroundMode !== false && task.background !== false;
+const runInBackground = true;
+const tab = await chrome.tabs.create({ url, active: !runInBackground });
 
   // Keep both keys in sync: PROCESSING_KEY for background, currentProcessingPost for automators.
   await chrome.storage.local.set({

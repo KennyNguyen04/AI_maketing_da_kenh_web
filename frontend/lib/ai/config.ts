@@ -13,12 +13,18 @@ export interface GenerationConfig {
 /**
  * Platform-specific AI configuration
  * Tuned for each social media channel
+ *
+ * Updated 14jul 2026:
+ *   - facebook: temperature 0.75→0.85 (sáng tạo hơn), maxTokens 2500→3500 (không truncate 200-400 từ + 3 đoạn văn)
+ *   - instagram: maxTokens 2500→3500 (caption dài hơn)
+ *   - linkedin_post: maxTokens 2000→3500 (200-400 từ + 2-3 insight)
+ *   - thêm facebook-group + threads (automator có sẵn, trước đó fallback default)
  */
 export const AI_GENERATION_CONFIG: Record<string, GenerationConfig> = {
   // LinkedIn single post - balanced creativity and coherence
   linkedin_post: {
     temperature: 0.7,
-    maxTokens: 2000,
+    maxTokens: 3500, // was 2000
     topP: 0.95,
     topK: 40,
   },
@@ -39,10 +45,18 @@ export const AI_GENERATION_CONFIG: Record<string, GenerationConfig> = {
     topK: 40,
   },
 
-  // Facebook - casual, storytelling approach
+  // Facebook - casual, storytelling. Tăng temperature + maxTokens cho 200-400 từ + ≥ 3 đoạn văn.
   facebook: {
+    temperature: 0.85, // was 0.75
+    maxTokens: 3500,   // was 2500
+    topP: 0.95,
+    topK: 40,
+  },
+
+  // Facebook Group - tone cộng đồng, khuyến khích thảo luận
+  'facebook-group': {
     temperature: 0.75,
-    maxTokens: 2500,
+    maxTokens: 3000,
     topP: 0.95,
     topK: 40,
   },
@@ -63,10 +77,18 @@ export const AI_GENERATION_CONFIG: Record<string, GenerationConfig> = {
     topK: 20,
   },
 
-  // Instagram
+  // Instagram - nâng maxTokens cho caption 200-400 từ
   instagram: {
     temperature: 0.75,
-    maxTokens: 2500,
+    maxTokens: 3500, // was 2500
+    topP: 0.95,
+    topK: 40,
+  },
+
+  // Threads - casual, Gen-Z
+  threads: {
+    temperature: 0.8,
+    maxTokens: 3000,
     topP: 0.95,
     topK: 40,
   },

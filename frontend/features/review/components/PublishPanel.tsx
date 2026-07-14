@@ -168,9 +168,11 @@ export function PublishPanel({
     setBusy('post-now')
     setMessage('')
     try {
-      // /api/schedule/[draftId] rejects scheduledDate <= now, so add a 60s buffer.
-      // Extension polls with lte('scheduled_for', now), so it'll pick the task up immediately.
-      const scheduledFor = new Date(Date.now() + 60_000)
+      // 14jul 2026: API giờ cho phép scheduledFor gần-now (trong khoảng -60s).
+      // +2s buffer để vượt validation chắc chắn, không cần 60s nữa.
+      // Extension poll task urgent (priority=100) ngay lập tức, không cần wait scheduled_for.
+      // Thay đổi này giảm latency "Đăng ngay" từ 60-90s xuống < 5s.
+      const scheduledFor = new Date(Date.now() + 2_000)
       const res = await fetch(`/api/schedule/${draft.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,10 +183,21 @@ export function PublishPanel({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to enqueue post')
+
+      // Wake up extension SW ngay lập tức để không phải đợi alarm 30s.
+      // web-bridge.js sẽ forward thành chrome.runtime.sendMessage({ action: 'forceScan' })
+      // để background.js gọi pollAndProcessTask() ngay.
+      try {
+        window.postMessage(
+          { type: 'AMPLIFY_FORCE_SCAN' },
+          window.location.origin
+        )
+      } catch (_) { /* non-fatal — extension vẫn pick task qua alarm */ }
+
       const attachmentNote = imageRefs.length > 0 ? ` (đính kèm ${imageRefs.length} ảnh)` : ' (text-only)'
       setMessage(
         extensionOnline
-          ? `Đã gửi tới Extension${attachmentNote}. Extension sẽ đăng trong vài giây. Mở trang lịch sử để theo dõi.`
+          ? `Đã gửi tới Extension${attachmentNote}. Tab sẽ mở trong 1-3 giây. Mở trang lịch sử để theo dõi.`
           : `Đã xếp hàng đợi${attachmentNote} (Extension đang offline). Mở Extension trên Chrome để Extension đăng ngay khi online.`,
       )
     } catch (error) {

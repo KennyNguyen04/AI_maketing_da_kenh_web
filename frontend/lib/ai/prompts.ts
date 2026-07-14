@@ -1,6 +1,11 @@
 /**
  * All AI prompt templates used across the application.
  * Separated from business logic for easy iteration and A/B testing.
+ *
+ * Updated 14jul 2026:
+ *   - length floor ≥ 150 từ cho FB/Instagram/LinkedIn (user yêu cầu)
+ *   - thêm facebook-group + threads (automator đã có, prompt thiếu)
+ *   - thêm ràng buộc "mỗi câu ≥ 8 từ", "≥ 3 đoạn văn" cho long-form channels
  */
 
 // ─── Brand Voice Analysis (from text sample) ───
@@ -45,29 +50,33 @@ Bắt buộc phải tuân thủ chính xác schema này (không thêm bớt key)
 `
 
 // ─── Content Repurposing (per channel) ───
+// Updated 14jul: mỗi kênh long-form (FB/Instagram/LinkedIn) yêu cầu ≥ 150 từ.
+// Channel có giới hạn cứng (X/Twitter) giữ < 280 ký tự.
 export const REPURPOSE_PROMPT_TEMPLATES: Record<string, string> = {
   'linkedin_post': `Yêu cầu:
-- Độ dài: 150-300 từ
-- Bắt đầu bằng một câu hook mạnh (không bắt đầu bằng "Tôi")
-- Có 1-2 insight chính
-- Kết thúc bằng một câu hỏi để tạo engagement
-- Không dùng quá 3 hashtag (viết HOA hoặc PascalCase)
-- Hạn chế emoji, ưu tiên nội dung có giá trị
-- Giữ đúng giọng văn đã chỉ định trong system prompt`,
+- Độ dài: 200-400 từ (LinkedIn algorithm ưu tiên bài ≥ 150 từ).
+- Bắt đầu bằng một câu hook mạnh (không bắt đầu bằng "Tôi" — bắt đầu bằng insight/observation).
+- Có 2-3 insight chính (có thể dùng danh sách bullet hoặc numbered).
+- Kết thúc bằng một câu hỏi để tạo engagement.
+- Không dùng quá 3 hashtag (viết HOA hoặc PascalCase).
+- Hạn chế emoji, ưu tiên nội dung có giá trị.
+- Mỗi câu ≥ 8 từ, tối thiểu 3 đoạn văn.
+- Giữ đúng giọng văn đã chỉ định trong system prompt.`,
 
   'linkedin_thread': `Yêu cầu:
 Viết một LinkedIn thread gồm 5-7 posts ngắn.
-Post 1: Hook + setup vấn đề
-Post 2-5: Mỗi post là một insight hoặc bước
-Post cuối: Takeaway + CTA
-Phân cách mỗi post bằng "---"
+Mỗi post có insight riêng, KHÔNG lặp nội dung giữa các post.
+Post 1: Hook + setup vấn đề (không bắt đầu bằng "Tôi").
+Post 2-5: Mỗi post là một insight hoặc bước cụ thể.
+Post cuối: Takeaway + CTA (follow / comment / share).
+Phân cách mỗi post bằng "---".
 Mỗi post không quá 300 ký tự.`,
 
   'linkedin_carousel': `Yêu cầu:
 Viết nội dung cho một LinkedIn carousel (slide deck).
 Format: Mỗi slide cách nhau bằng "---SLIDE---"
 Slide 1: Title (tiêu đề hấp dẫn)
-Slide 2-8: Nội dung mỗi slide (tối đa 150 ký tự)
+Slide 2-8: Nội dung mỗi slide (tối đa 200 ký tự — nâng từ 150)
 Slide cuối: CTA + hashtags
 Tổng cộng 8-10 slides.
 Không emoji, giữ chuyên nghiệp.`,
@@ -75,10 +84,20 @@ Không emoji, giữ chuyên nghiệp.`,
   'facebook': `Yêu cầu:
 Viết một Facebook post casual, kể chuyện, gần gũi.
 Độ dài 200-400 từ.
-Có thể dùng emoji một cách tự nhiên (1-3 emoji per post)
-Có hook ở đầu để thu hút attention
-Kết thúc bằng câu hỏi hoặc CTA nhẹ nhàng
-1-5 hashtags ở cuối`,
+Mỗi câu ≥ 8 từ. Tối thiểu 3 đoạn văn (xuống dòng đôi để dễ đọc).
+Có thể dùng emoji một cách tự nhiên (1-3 emoji per post).
+Có hook ở đầu để thu hút attention.
+Kết thúc bằng câu hỏi hoặc CTA nhẹ nhàng.
+1-5 hashtags ở cuối (viết HOA hoặc PascalCase).`,
+
+  'facebook-group': `Yêu cầu:
+Viết một bài đăng cho Facebook Group (cộng đồng).
+Độ dài: 200-400 từ.
+Tone thân thiện, cộng đồng, khuyến khích thảo luận.
+Mở đầu bằng hook thu hút, có insight chia sẻ, kết thúc bằng câu hỏi gợi mở cho group members.
+Mỗi câu ≥ 8 từ, tối thiểu 3 đoạn văn.
+1-3 hashtag ở cuối (viết HOA hoặc PascalCase).
+Tránh ngôn ngữ quá bán hàng — group members ghét quảng cáo lộ liễu.`,
 
   'twitter': `Yêu cầu:
 Viết một tweet ngắn dưới 280 ký tự.
@@ -105,10 +124,19 @@ Có thể dùng emoji tự nhiên`,
 
   'instagram': `Yêu cầu:
 Viết caption cho Instagram post.
+Độ dài: 200-400 từ (đủ dài để giữ engagement > 3s).
+Bắt đầu bằng hook CỰC MẠNH trong 2-3 dòng đầu (nếu hook yếu người đọc không bấm "...more").
+Phần chính có giá trị (story, insight, hoặc value) — phải cho người đọc lý do keep-reading.
+CTA ở cuối (bình luận / save / share / tag friend).
+8-15 hashtags ở cuối (viết thường, cách nhau dấu cách).
+Có thể dùng line breaks để dễ đọc.`,
+
+  'threads': `Yêu cầu:
+Viết một Threads post (Instagram's text-based social).
 Độ dài: 150-300 từ.
-Bắt đầu bằng hook trong 2-3 dòng đầu (thu hút người đọc "keep reading")
-Phần chính có giá trị (story, insight, hoặc value)
-CTA ở cuối
-8-15 hashtags (viết thường, cách nhau dấu cách)
-Có thể dùng line breaks để dễ đọc`
+Tone casual, hội thoại, xu hướng Gen-Z nếu phù hợp.
+Bắt đầu bằng hook trong 1-2 dòng đầu (khiến người đọc phải dừng cuộn).
+Insight chính ở giữa, CTA nhẹ ở cuối.
+2-5 hashtag (không bắt buộc nhưng encouraged).
+Có thể dùng emoji 1-2 cái tự nhiên.`,
 }

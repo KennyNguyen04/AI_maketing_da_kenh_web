@@ -14,9 +14,11 @@ import { Toast } from '@/components/ui/Toast'
 import { JobStatusPoller } from './JobStatusPoller'
 import { createClient } from '@/lib/supabase/client'
 
+// Ẩn LinkedIn khỏi form (giữ type Channel vì DB có draft cũ).
+// User yêu cầu 2026-07-14: chỉ cho phép kênh có automator.
+// LinkedIn sẽ được build sau khi có fb-group + threads ổn định.
+// Draft LinkedIn cũ vẫn hiển thị trong /history và /scheduler (xem QueueList filter).
 const channelOptions: { id: Channel; icon: typeof Linkedin; label: string; description: string }[] = [
-  { id: 'linkedin_post', icon: Linkedin, label: 'LinkedIn Post', description: 'Bài ngắn 150-300 từ' },
-  { id: 'linkedin_thread', icon: Linkedin, label: 'LinkedIn Thread', description: 'Chuỗi 5-7 ý liên tiếp' },
   { id: 'facebook', icon: Facebook, label: 'Facebook Page', description: 'Bài kể chuyện 200-400 từ' },
   { id: 'twitter', icon: Twitter, label: 'X', description: 'Bản ngắn dưới 280 ký tự' },
 ]

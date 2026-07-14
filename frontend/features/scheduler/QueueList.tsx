@@ -18,7 +18,19 @@ interface QueueListProps {
   onCancelRequest?: (id: string) => void
   onEdit?: (item: QueueItem) => void
   className?: string
+  /**
+   * Show items for channels without automator (LinkedIn).
+   * Default false → ẩn LinkedIn khỏi queue vì không thể đăng tự động.
+   * Pass `showAll` true để vẫn hiển thị (vd trang History cũ) với badge "Tạm dừng".
+   */
+  showAll?: boolean
 }
+
+/**
+ * Channels có automator → hiển thị trong queue mặc định.
+ * LinkedIn (post/thread/carousel) bị ẩn vì extension/automators/ chưa có.
+ */
+const SCHEDULABLE_CHANNELS = new Set(['facebook', 'x', 'twitter'])
 
 const channelIcons = {
   twitter: Twitter,
@@ -69,8 +81,12 @@ function formatScheduledTime(dateString: string): { date: string; time: string; 
   return { date: dateStr, time: timeStr, isPast }
 }
 
-export function QueueList({ items, onCancelRequest, onEdit, className }: QueueListProps) {
+export function QueueList({ items, onCancelRequest, onEdit, className, showAll = false }: QueueListProps) {
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+
+  // Filter LinkedIn (no automator) trừ khi caller muốn showAll
+  const visibleItems = showAll ? items : items.filter((it) => SCHEDULABLE_CHANNELS.has(it.channel))
+  const hiddenCount = items.length - visibleItems.length
 
   // setCancellingId is exposed for callers that want to track in-flight cancellations; kept for API parity.
   void setCancellingId
@@ -80,13 +96,15 @@ export function QueueList({ items, onCancelRequest, onEdit, className }: QueueLi
     setCancellingId(id)
   }
 
-  if (items.length === 0) {
+  if (visibleItems.length === 0) {
     return (
       <div className={cn('rounded-card border border-app-line bg-pure-canvas p-8 text-center', className)}>
         <Clock className="mx-auto mb-3 h-12 w-12 text-app-muted/40" />
         <h3 className="mb-1 font-medium text-midnight-ink">Không có bài đăng nào được lên lịch</h3>
         <p className="text-sm text-app-muted">
-          Chọn một bản nháp và đặt lịch đăng bài
+          {hiddenCount > 0
+            ? `${hiddenCount} bài LinkedIn đã ẩn — kênh này chưa hỗ trợ tự động đăng.`
+            : 'Chọn một bản nháp và đặt lịch đăng bài'}
         </p>
       </div>
     )
@@ -96,24 +114,28 @@ export function QueueList({ items, onCancelRequest, onEdit, className }: QueueLi
     <div className={cn('rounded-card border border-app-line bg-pure-canvas', className)}>
       <div className="border-b border-app-line p-4">
         <h3 className="font-semibold text-midnight-ink">
-          Bài đăng đã lên lịch ({items.length})
+          Bài đăng đã lên lịch ({visibleItems.length})
         </h3>
         <p className="mt-0.5 text-sm text-app-muted">
-          Quản lý và chỉnh sửa các bài đăng đã lên lịch
+          {hiddenCount > 0
+            ? `Đã ẩn ${hiddenCount} bài LinkedIn (kênh chưa hỗ trợ tự động đăng).`
+            : 'Quản lý và chỉnh sửa các bài đăng đã lên lịch'}
         </p>
       </div>
 
       <div className="divide-y divide-app-line">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const { date, time, isPast } = formatScheduledTime(item.scheduled_for)
           const ChannelIcon = channelIcons[item.channel as keyof typeof channelIcons] || Twitter
+          const isDisabledChannel = !SCHEDULABLE_CHANNELS.has(item.channel)
 
           return (
             <div
               key={item.id}
               className={cn(
                 'p-4 transition-colors',
-                isPast && 'bg-vibrant-orange/5'
+                isPast && 'bg-vibrant-orange/5',
+                isDisabledChannel && 'opacity-60'
               )}
             >
               <div className="flex items-start gap-3">
@@ -129,6 +151,11 @@ export function QueueList({ items, onCancelRequest, onEdit, className }: QueueLi
                     <span className="text-sm font-medium text-midnight-ink">
                       {channelLabels[item.channel as keyof typeof channelLabels] || item.channel}
                     </span>
+                    {isDisabledChannel && showAll && (
+                      <span className="inline-flex items-center gap-1 rounded-badge bg-app-muted/15 px-2 py-0.5 text-xs text-app-muted">
+                        Tạm dừng
+                      </span>
+                    )}
                     {isPast && (
                       <span className="inline-flex items-center gap-1 rounded-badge bg-vibrant-orange/10 px-2 py-0.5 text-xs text-vibrant-orange">
                         <AlertCircle className="h-3 w-3" />

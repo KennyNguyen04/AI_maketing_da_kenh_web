@@ -404,18 +404,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // ─── Background mode toggle (persisted to storage, read by background.js) ───
-  const bgToggle = document.getElementById('bg-mode-toggle');
-  if (bgToggle) {
-    chrome.storage.local.get('backgroundMode', (d) => {
-      bgToggle.checked = d.backgroundMode !== false; // default ON
-    });
-    bgToggle.addEventListener('change', async () => {
-      await chrome.storage.local.set({ backgroundMode: bgToggle.checked });
-      // Re-broadcast to background SW so the in-flight task also adopts the new mode.
-      chrome.runtime.sendMessage({ action: 'setBackgroundMode', value: bgToggle.checked });
-    });
-  }
+// ─── Background mode toggle (DISABLED per 14jul spec — always run in background) ───
+//
+// Original behavior: user can toggle ON/OFF để chọn đăng ở tab nền hay foreground.
+// New behavior (14jul): always open posting tab in background. User muốn focus thì
+// bấm "↗" trên banner trong popup.
+//
+// Keep null-op block below so popup.js vẫn load OK nếu extension user còn cache
+// version cũ với toggle HTML. Khi đó toggle sẽ visible nhưng không hoạt động.
+const bgToggle = document.getElementById('bg-mode-toggle');
+if (bgToggle) {
+  // Force ON and ignore user interaction.
+  bgToggle.checked = true;
+  bgToggle.disabled = true;
+  // intentionally no 'change' event listener
+}
 
   // ─── Background banner: listen for processing events from SW ───
   const banner = document.getElementById('bg-banner');

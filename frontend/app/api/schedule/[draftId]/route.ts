@@ -33,12 +33,18 @@ export async function POST(
       )
     }
 
-    if (scheduledDate <= new Date()) {
-      return NextResponse.json(
-        { error: 'Scheduled time must be in the future' },
-        { status: 400 }
-      )
-    }
+// 14jul 2026: cho phép scheduledFor trong khoảng (-60s, +∞) để hỗ trợ
+  // "Đăng ngay" (PublishPanel handlePostNow) mà user click vào 0.5s.
+  // Buffer 60s phía quá khứ để tránh user typo ngày quá khứ.
+  // Schedule route được gọi với priority=100 cho task urgent → extension pick ngay.
+  const MIN_PAST_BUFFER_MS = 60_000
+  const cutoff = new Date(Date.now() - MIN_PAST_BUFFER_MS)
+  if (scheduledDate < cutoff) {
+    return NextResponse.json(
+      { error: 'Scheduled time không hợp lệ: không quá 60s trong quá khứ' },
+      { status: 400 }
+    )
+  }
 
     const { data: draft, error: fetchError } = await supabase
       .from('drafts')
