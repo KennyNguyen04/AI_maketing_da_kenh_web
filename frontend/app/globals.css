@@ -22,6 +22,8 @@
   --color-app-bg: #f7f8fb;
   --color-app-line: #e5e7eb;
   --color-app-muted: #6b7280;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
   --color-gradient-aura-start: #cc7ab5;
   --font-heading: var(--font-lora), Georgia, serif;
   --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;

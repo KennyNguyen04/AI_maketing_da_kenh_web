@@ -166,8 +166,8 @@ export function AdminPanel() {
             className={clsx(
               'rounded-badge px-4 py-2 text-sm font-medium transition',
               activeTab === tab.id
-                ? 'bg-primary text-pure-canvas'
-                : 'border border-app-line bg-pure-canvas text-dark-charcoal hover:border-sky-blue/40'
+                ? 'bg-sky-blue text-white'
+                : 'border border-app-line bg-white text-midnight-ink hover:border-sky-blue/40'
             )}
           >
             {tab.label}

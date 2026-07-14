@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Fingerprint, LayoutDashboard, LogOut, Settings, ShieldCheck, Sparkles } from 'lucide-react'
+import { Fingerprint, LayoutDashboard, LogOut, Settings, ShieldCheck, Sparkles, MessageSquare } from 'lucide-react'
 import { clsx } from 'clsx'
 import { signOut } from '@/features/auth/actions'
 
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
   { href: '/vaults', icon: Fingerprint, label: 'Brand Vault' },
   { href: '/dashboard/new', icon: Sparkles, label: 'Tạo nội dung' },
+  { href: '/feedback', icon: MessageSquare, label: 'Phản hồi' },
   { href: '/settings', icon: Settings, label: 'Phân phối' },
 ]
 
