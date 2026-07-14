@@ -6,6 +6,7 @@ import { Settings, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { NumberInput } from '@/components/ui/NumberInput'
 import { Toggle } from '@/components/ui/Toggle'
 
 const CHANNELS = [
@@ -157,14 +158,12 @@ export function ExtensionSettingsForm() {
 
           {settings.auto_preview && (
             <div className="max-w-[200px]">
-              <Input
-                type="number"
+              <NumberInput
                 label="Thời gian đếm ngược (giây)"
                 value={settings.preview_delay_seconds}
-                onChange={(val) => {
-                  const num = parseInt(val) || 0
-                  setSettings({ ...settings, preview_delay_seconds: Math.min(300, Math.max(0, num)) })
-                }}
+                onChange={(val) => setSettings({ ...settings, preview_delay_seconds: val })}
+                min={0}
+                max={300}
                 helper="0-300 giây"
               />
             </div>
@@ -195,33 +194,27 @@ export function ExtensionSettingsForm() {
                   
                   {limit.enabled && (
                     <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-xs text-app-muted">Bài/ngày</label>
-                        <Input
-                          type="number"
-                          value={limit.perDay}
-                          onChange={(val) => updateChannelLimit(channel.id, 'perDay', parseInt(val) || 0)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-app-muted">Bài/giờ</label>
-                        <Input
-                          type="number"
-                          value={limit.perHour}
-                          onChange={(val) => updateChannelLimit(channel.id, 'perHour', parseInt(val) || 0)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-app-muted">Khoảng cách (phút)</label>
-                        <Input
-                          type="number"
-                          value={Math.round(limit.minIntervalS / 60)}
-                          onChange={(val) => updateChannelLimit(channel.id, 'minIntervalS', (parseInt(val) || 0) * 60)}
-                          className="mt-1"
-                        />
-                      </div>
+                      <NumberInput
+                        label="Bài/ngày"
+                        value={limit.perDay}
+                        onChange={(val) => updateChannelLimit(channel.id, 'perDay', val)}
+                        min={1}
+                        className="mt-1"
+                      />
+                      <NumberInput
+                        label="Bài/giờ"
+                        value={limit.perHour}
+                        onChange={(val) => updateChannelLimit(channel.id, 'perHour', val)}
+                        min={1}
+                        className="mt-1"
+                      />
+                      <NumberInput
+                        label="Khoảng cách (phút)"
+                        value={Math.round(limit.minIntervalS / 60)}
+                        onChange={(val) => updateChannelLimit(channel.id, 'minIntervalS', val * 60)}
+                        min={1}
+                        className="mt-1"
+                      />
                     </div>
                   )}
                 </div>
