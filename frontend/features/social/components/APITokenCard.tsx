@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Key, Copy, RefreshCw, Eye, EyeOff, CheckCircle2, Trash2 } from 'lucide-react'
+import { Key, Copy, RefreshCw, Eye, EyeOff, CheckCircle2, Trash2, Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -19,9 +19,27 @@ export function APITokenCard() {
   const [confirmRevoke, setConfirmRevoke] = useState(false)
   const [revoking, setRevoking] = useState(false)
   const [revokeMessage, setRevokeMessage] = useState<string | null>(null)
+  const [extensionLinked, setExtensionLinked] = useState(false)
 
   useEffect(() => {
     loadExistingToken()
+  }, [])
+
+  // Listen for the ExtensionConnector's "linked" event so we can swap UI
+  // from "Token chưa liên kết" to "Token đang hoạt động" without passing
+  // state between sibling components.
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'AMPLIFY_TOKEN_SAVED') {
+        setExtensionLinked(true)
+        setRevokeMessage(null)
+      }
+      if (e.data?.type === 'AMPLIFY_TOKEN_CLEARED') {
+        setExtensionLinked(false)
+      }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
   }, [])
 
   async function loadExistingToken() {
@@ -115,6 +133,8 @@ setToken(null)
           // ignore
         }
         // Tell extension to drop the cached token too.
+        // Token clear → content script bắn AMPLIFY_TOKEN_CLEARED ngược lại,
+        // APITokenCard lắng nghe message đó để reset extensionLinked.
         window.postMessage({ type: 'AMPLIFY_CLEAR_TOKEN' }, window.location.origin)
         setRevokeMessage('Đã thu hồi token. Extension đang dùng token cũ sẽ ngừng hoạt động ngay lập tức.')
     } catch (err) {
@@ -171,61 +191,94 @@ setToken(null)
                     Token mới vừa được tạo
                   </p>
                   <p className="mt-1 text-xs text-sunset-orange/80">
-                    Token cũ (nếu có) đã bị vô hiệu hóa. Bạn có thể xem lại token này bất cứ lúc nào trên trang Settings.
+                    Token cũ (nếu có) đã bị vô hiệu hóa. Cuộn xuống card bên dưới và bấm &ldquo;🔗 Liên kết ngay&rdquo; để gửi token cho Extension.
                   </p>
                 </div>
               )}
 
-              <div className="relative">
-                <label className="mb-1.5 block text-xs font-medium text-app-muted">
-                  API Token của bạn
-                </label>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 overflow-x-auto rounded-card bg-app-bg px-3 py-2 text-sm font-mono text-midnight-ink">
-                    {showToken ? token : '•'.repeat(Math.min(token.length, 32))}
-                  </code>
-                  <button
-                    onClick={() => setShowToken(!showToken)}
-                    className="rounded-card p-2 text-app-muted transition-colors hover:bg-app-bg hover:text-midnight-ink"
-                    title={showToken ? 'Ẩn token' : 'Hiện token'}
-                  >
-                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              {/* Token preview — hidden once extension is linked.
+                  Reasoning: token is a secret like an API key; showing it on
+                  screen after it's already serving its purpose adds leak
+                  risk (screenshots, screen sharing) without any UX benefit.
+                  Users can copy to clipboard ONLY in the brief window right
+                  after generation, if they need it for CLI/Postman. */}
+              {!extensionLinked && (
+                <div className="rounded-card bg-sky-blue/10 border border-sky-blue/25 p-3">
+                  <div className="flex items-start gap-2">
+                    <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-sky-blue" />
+                    <div>
+                      <p className="text-xs font-medium text-sky-blue">Bước tiếp theo</p>
+                      <p className="mt-1 text-xs text-sky-blue/80">
+                        Cuộn xuống phần <strong>&ldquo;Kết nối Chrome Extension&rdquo;</strong> bên dưới và bấm <strong>🔗 Liên kết ngay</strong> để gửi token tự động. Bạn không cần copy/paste thủ công.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={copyToken}
-                >
-                  {copied ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 text-forest-fern" />
-                      Đã copy!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copy Token
-                    </>
-                  )}
-                </Button>
-                <span className="text-xs text-app-muted">
-                  Token được lưu an toàn, có thể xem lại bất cứ lúc nào
-                </span>
-              </div>
+              {extensionLinked && (
+                <div className="rounded-card bg-forest-fern/10 border border-forest-fern/25 p-3">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-forest-fern" />
+                    <div>
+                      <p className="text-xs font-semibold text-forest-fern">
+                        Extension đã nhận token và đang hoạt động
+                      </p>
+                      <p className="mt-1 text-xs text-forest-fern/80">
+                        Token đã được lưu an toàn trong Extension. Bạn có thể xóa tab này.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <div className="rounded-card bg-sky-blue/10 p-3">
-                <p className="text-xs font-medium text-sky-blue">Hướng dẫn:</p>
-                <ol className="mt-1.5 space-y-0.5 text-xs text-sky-blue/80">
-                  <li>1. Copy token bên trên</li>
-                  <li>2. Mở Chrome Extension popup</li>
-                  <li>3. Dán token vào ô &ldquo;API Token&rdquo;</li>
-                  <li>4. Bấm &ldquo;Lưu &amp; Kết nối&rdquo;</li>
-                </ol>
-              </div>
+              {/* Advanced: reveal token for CLI / Postman / debugging.
+                  Hidden by default to reduce accidental exposure. */}
+              {!extensionLinked && (
+                <details className="rounded-card border border-app-bg">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-app-muted hover:text-midnight-ink">
+                    ⚙️ Tùy chọn nâng cao: Xem / Copy token thủ công
+                  </summary>
+                  <div className="space-y-3 px-3 pb-3 pt-1">
+                    <div className="relative">
+                      <label className="mb-1.5 block text-xs font-medium text-app-muted">
+                        API Token của bạn
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 overflow-x-auto rounded-card bg-app-bg px-3 py-2 text-sm font-mono text-midnight-ink">
+                          {showToken ? token : '•'.repeat(Math.min(token.length, 32))}
+                        </code>
+                        <button
+                          onClick={() => setShowToken(!showToken)}
+                          className="rounded-card p-2 text-app-muted transition-colors hover:bg-app-bg hover:text-midnight-ink"
+                          title={showToken ? 'Ẩn token' : 'Hiện token'}
+                          aria-label={showToken ? 'Ẩn token' : 'Hiện token'}
+                        >
+                          {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button variant="outline" size="sm" onClick={copyToken}>
+                      {copied ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-forest-fern" />
+                          Đã copy!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          Copy Token
+                        </>
+                      )}
+                    </Button>
+
+                    <p className="text-[11px] text-vibrant-orange">
+                      ⚠️ Token là bí mật — không chia sẻ hay chụp màn hình. Nếu lộ, bấm &ldquo;Thu hồi token&rdquo; bên dưới.
+                    </p>
+                  </div>
+                </details>
+              )}
 
               <div className="pt-2 border-t border-app-bg space-y-2">
                 <Button
