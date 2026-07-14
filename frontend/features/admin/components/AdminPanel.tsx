@@ -89,7 +89,16 @@ export function AdminPanel() {
         setJobsList(jobsListData.jobs || [])
         setJobsTotal(jobsListData.total || 0)
       } else {
-        failed.push(`/api/admin/jobs → ${jobsListRes.status}`)
+        let detail = ''
+        try {
+          const body = await jobsListRes.json()
+          detail = body.error || body.message || ''
+          if (body.code) detail += ` [${body.code}]`
+          if (body.hint) detail += ` (${body.hint})`
+        } catch {
+          // body not JSON, leave detail blank
+        }
+        failed.push(`/api/admin/jobs → ${jobsListRes.status}${detail ? `: ${detail}` : ''}`)
       }
 
       if (failed.length > 0) {

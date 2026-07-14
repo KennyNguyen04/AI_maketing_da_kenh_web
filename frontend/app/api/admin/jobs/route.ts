@@ -36,7 +36,22 @@ export async function GET(request: Request) {
   const { data, error, count } = await query
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[admin/jobs] repurpose_jobs query failed', {
+      status,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    })
+    return NextResponse.json(
+      {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      },
+      { status: 500 },
+    )
   }
 
   // Hydrate user emails so the admin table can show who owns each job.
