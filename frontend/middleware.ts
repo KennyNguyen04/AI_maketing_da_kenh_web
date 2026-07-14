@@ -14,6 +14,14 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public assets
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/inngest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Excluded from middleware:
+    //   - _next/static, _next/image : Next.js build assets
+    //   - favicon.ico               : static icon
+    //   - api/inngest               : Inngest webhook (auth via signing key)
+    //   - /downloads/*              : public extension zip + version info,
+    //                                 downloaded by users BEFORE they are logged in
+    //                                 (extension install flow is pre-auth)
+    //   - .svg/png/jpg/etc images   : static assets in /public
+    '/((?!_next/static|_next/image|favicon.ico|api/inngest|downloads/.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
