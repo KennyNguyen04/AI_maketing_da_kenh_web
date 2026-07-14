@@ -68,14 +68,30 @@ export function ExtensionConnector() {
     setError(null)
     setConnecting(true)
 
-    // Read token from sessionStorage (set by APITokenCard)
-    const token = sessionStorage.getItem('amplify_api_token')
+    // Read token from sessionStorage (set by APITokenCard). If missing —
+    // i.e. brand-new user who hasn't visited the token card yet — we
+    // generate one transparently so the "1 click to connect" promise holds.
+    let token = sessionStorage.getItem('amplify_api_token')
     if (!token) {
-      setError(
-        'Chưa có API token trong phiên này. Vui lòng bấm "Tạo API Token" ở trên trước.'
-      )
-      setConnecting(false)
-      return
+      try {
+        const res = await fetch('/api/user/api-token', { method: 'POST' })
+        const data = await res.json()
+        if (!res.ok || !data.token) {
+          throw new Error(data.error || 'Không thể tạo token')
+        }
+        token = data.token
+        sessionStorage.setItem('amplify_api_token', token)
+        // Tell APITokenCard (sibling component) to refresh its state.
+        window.dispatchEvent(new CustomEvent('amplify:token-changed'))
+      } catch (e) {
+        setError(
+          e instanceof Error
+            ? e.message
+            : 'Không tạo được token. Vui lòng thử lại.'
+        )
+        setConnecting(false)
+        return
+      }
     }
 
     window.postMessage(

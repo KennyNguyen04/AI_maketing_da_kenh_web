@@ -38,8 +38,16 @@ export function APITokenCard() {
         setExtensionLinked(false)
       }
     }
+    const onTokenChanged = () => {
+      // Sibling component created/rotated a token — refresh our local state.
+      loadExistingToken()
+    }
     window.addEventListener('message', onMsg)
-    return () => window.removeEventListener('message', onMsg)
+    window.addEventListener('amplify:token-changed', onTokenChanged)
+    return () => {
+      window.removeEventListener('message', onMsg)
+      window.removeEventListener('amplify:token-changed', onTokenChanged)
+    }
   }, [])
 
   async function loadExistingToken() {
