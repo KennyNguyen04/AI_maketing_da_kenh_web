@@ -50,9 +50,21 @@ export function ExtensionConnector() {
       if (e.data?.type === 'AMPLIFY_TOKEN_SAVED') {
         setLinked(true)
         setConnecting(false)
+        setError(null)
       }
       if (e.data?.type === 'AMPLIFY_TOKEN_CLEARED') {
         setLinked(false)
+        setError(null)
+      }
+      // 14jul 2026: server refuse to register, dù token đã lưu local.
+      // Hiển thị toast để user biết token OK nhưng server không confirm.
+      if (e.data?.type === 'AMPLIFY_REGISTER_FAILED') {
+        setLinked(true) // token vẫn đã lưu ở chrome.storage.local
+        setConnecting(false)
+        setError(
+          `Đã lưu token nhưng server chưa xác nhận: ${e.data.error || 'unknown'}. ` +
+          `Có thể token không đúng domain — vui lòng liên kết lại.`
+        )
       }
     }
     window.addEventListener('message', onMsg)

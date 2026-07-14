@@ -71,6 +71,10 @@ export async function analyzeVoiceFromForm(data: { topics: string; tone: string;
 
 /**
  * Generate repurposed content for a specific social media channel.
+ *
+ * NOTE (14jul 2026): nếu voice profile có `sentence_style: "short"` nhưng channel yêu cầu
+ * ≥ 150 từ (FB, Instagram, LinkedIn), sentence_style bị ignore — channel rules thắng.
+ * User yêu cầu 14jul: "Mỗi kênh phải dài ≥ 150 từ".
  */
 export async function repurposeContentAI(systemPrompt: string, sourceContent: string, channel: string) {
   const instructions = REPURPOSE_PROMPT_TEMPLATES[channel]
