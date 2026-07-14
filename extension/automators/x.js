@@ -278,6 +278,11 @@ window.amplify_injected_x = true;
   } catch (error) {
     console.error('[Amplify-X] Error:', error);
     addLog(`❌ Lỗi: ${error.message}`);
+    // Cleanup ngay currentProcessingPost trong storage để popup không
+    // hiển thị stale "Đang đăng lên X" sau khi task đã fail. Background
+    // vẫn xóa lần nữa trong postFailed handler (line 480), nhưng đây
+    // là belt-and-suspenders cho UX consistency.
+    try { await chrome.storage.local.remove('currentProcessingPost'); } catch (_) {}
     if (postId) chrome.runtime.sendMessage({ action: 'postFailed', postId, error: error.message });
   }
 })();

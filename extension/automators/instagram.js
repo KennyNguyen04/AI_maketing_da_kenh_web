@@ -324,6 +324,10 @@ window.amplify_injected_ig = true;
   } catch (error) {
     console.error('[Amplify-IG] Error:', error);
     addLog(`❌ Lỗi: ${error.message}`);
+    // Cleanup ngay currentProcessingPost trong storage để popup không
+    // hiển thị stale "Đang đăng lên Instagram" sau khi task đã fail.
+    // Background vẫn xóa lần nữa trong postFailed handler (line 480).
+    try { await chrome.storage.local.remove('currentProcessingPost'); } catch (_) {}
     if (postId) chrome.runtime.sendMessage({ action: 'postFailed', postId, error: error.message });
   }
 })();
