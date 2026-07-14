@@ -10,7 +10,7 @@ export function Hero() {
       <span className="inline-flex rounded-badge border border-hint-of-blue bg-hint-of-blue/60 px-3 py-1 text-xs font-medium text-regal-violet">
         AI Marketing · Tiếng Việt · Approval-first
       </span>
-      <h1 className="mx-auto mt-5 max-w-[760px] font-serif text-4xl leading-tight text-pure-canvas md:text-6xl">
+      <h1 className="mx-auto mt-5 max-w-[760px] text-4xl font-semibold leading-[1.15] tracking-tight text-pure-canvas md:text-6xl">
         Tái chế một bài viết thành nội dung đa kênh
       </h1>
       <p className="mx-auto mt-5 max-w-[640px] text-base leading-7 text-pure-canvas/90">

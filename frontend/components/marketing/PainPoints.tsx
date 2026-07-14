@@ -23,7 +23,7 @@ export function PainPoints() {
   return (
     <section id="pain-points" className="border-y border-app-line bg-pure-canvas px-4 py-12 md:px-8 md:py-16">
       <div className="mx-auto max-w-[1180px]">
-        <h2 className="text-center font-serif text-3xl text-midnight-ink md:text-4xl">
+        <h2 className="text-center text-3xl font-semibold tracking-tight text-midnight-ink md:text-4xl">
           Bạn đang gặp vấn đề này?
         </h2>
         <p className="mx-auto mt-3 max-w-[640px] text-center text-sm leading-6 text-app-muted md:text-base">
