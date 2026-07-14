@@ -20,10 +20,12 @@ export async function GET(request: Request) {
   // source_content and error_message can leak private user input (drafts,
   // personal notes, API error strings). Only the columns AdminPanel renders
   // are needed.
+  // Note: repurpose_jobs has NO updated_at column — only created_at. Selecting
+  // a non-existent column returns 42703 and breaks the whole /admin page.
   let query = supabase
     .from('repurpose_jobs')
     .select(
-      'id, user_id, title, source_type, channels, status, created_at, updated_at',
+      'id, user_id, title, source_type, channels, status, created_at',
       { count: 'exact' },
     )
     .order('created_at', { ascending: false })
