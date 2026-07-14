@@ -84,11 +84,29 @@ export function PublishPanel({
 
   useEffect(() => {
     // /api/extension/health uses cookie auth (no Bearer) — safe to call from webapp.
-    fetch('/api/extension/health')
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => setExtensionOnline(Boolean(d?.connected)))
-      .catch(() => setExtensionOnline(false))
-      .finally(() => setExtensionChecked(true))
+    const refreshExtensionOnline = () => {
+      fetch('/api/extension/health')
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => setExtensionOnline(Boolean(d?.connected)))
+        .catch(() => setExtensionOnline(false))
+        .finally(() => setExtensionChecked(true));
+    };
+    refreshExtensionOnline();
+
+    // Also refresh when the user just linked their extension via the
+    // 1-click "Liên kết ngay" flow. Otherwise PublishPanel would stay
+    // stuck on "Extension offline" until full reload, even though the
+    // web-bridge already POSTed /register and the badge turned green.
+    const onMsg = (e: MessageEvent) => {
+      if (
+        e.data?.type === 'AMPLIFY_TOKEN_SAVED' ||
+        e.data?.type === 'AMPLIFY_TOKEN_CLEARED'
+      ) {
+        refreshExtensionOnline();
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
   }, [])
 
   async function copyAndOpen(key: 'x' | 'facebook' | 'threads' | 'instagram' | 'linkedin') {
