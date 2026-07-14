@@ -53,12 +53,27 @@ window.addEventListener('message', (event) => {
         api_base: cleanBase,
         tokenExpired: false,
       },
-      () => {
+      async () => {
         document.documentElement.setAttribute('data-amplify-ext-linked', 'true');
         // Acknowledge back to the page so the SPA can render a success toast
         // without re-reading storage.
         window.postMessage({ type: 'AMPLIFY_TOKEN_SAVED' }, event.origin);
         log('Token saved from web bridge');
+
+        // Also register with backend so /api/extension/health reports
+        // connected=true. Without this, the web app's "Đã kết nối" badge
+        // on the setup guide stays orange forever even though the token
+        // is saved locally. Best-effort: a register failure shouldn't
+        // break the manual-popup flow, which registers on its own.
+        try {
+          const regRes = await fetch(`${cleanBase}/api/extension/register`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${data.token}` },
+          });
+          log('Auto-register:', regRes.ok ? 'ok' : `http ${regRes.status}`);
+        } catch (e) {
+          log('Auto-register failed (non-fatal):', e && e.message);
+        }
       }
     );
   }

@@ -81,6 +81,24 @@ export function ExtensionSetupGuide() {
     return () => clearInterval(interval)
   }, [])
 
+  // React instantly when the 1-click link flow finishes — the page may
+  // have just hidden the token card / shown the success card on a sibling
+  // component, but our `status.connected` badge only reflects the
+  // /api/extension/health response. Refreshing on AMPLIFY_TOKEN_SAVED
+  // means the badge flips to green without waiting for the 30s poll.
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (
+        e.data?.type === 'AMPLIFY_TOKEN_SAVED' ||
+        e.data?.type === 'AMPLIFY_TOKEN_CLEARED'
+      ) {
+        checkExtensionStatus()
+      }
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+
   const steps = [
     {
       icon: Package,
