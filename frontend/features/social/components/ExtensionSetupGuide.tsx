@@ -7,10 +7,12 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
-  Loader2,
+  RefreshCw,
   Shield,
   Zap,
   Globe,
+  FolderOpen,
+  Package,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -41,6 +43,7 @@ export function ExtensionSetupGuide() {
     setChecking(false)
   }
 
+
   useEffect(() => {
     checkExtensionStatus()
     const interval = setInterval(checkExtensionStatus, 30000) // Check every 30s
@@ -49,7 +52,17 @@ export function ExtensionSetupGuide() {
 
   const steps = [
     {
-      icon: Download,
+      icon: Package,
+      title: 'Tải Extension',
+      description: 'Bấm nút "Tải Extension" bên dưới để tải file .zip về máy',
+    },
+    {
+      icon: FolderOpen,
+      title: 'Giải nén',
+      description: 'Giải nén file .zip vừa tải vào một thư mục trên máy',
+    },
+    {
+      icon: Globe,
       title: 'Mở Chrome Extensions',
       description: 'Truy cập chrome://extensions/ trên trình duyệt Chrome',
     },
@@ -59,9 +72,9 @@ export function ExtensionSetupGuide() {
       description: 'Click công tắc Developer mode ở góc phải trên cùng',
     },
     {
-      icon: Globe,
+      icon: Download,
       title: 'Load Extension',
-      description: 'Click "Load unpacked" và chọn thư mục extension trong project',
+      description: 'Click "Load unpacked" và chọn thư mục extension vừa giải nén',
     },
     {
       icon: Zap,
@@ -106,7 +119,7 @@ export function ExtensionSetupGuide() {
                 title="Kiểm tra kết nối"
                 aria-label="Kiểm tra kết nối"
               >
-                <Loader2 className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
@@ -127,6 +140,28 @@ export function ExtensionSetupGuide() {
             </div>
           )}
 
+          {/* Download Extension Button – prominent CTA */}
+          <div className="mb-6 rounded-card border border-sky-blue/20 bg-sky-blue/5 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-midnight-ink">Bước 1: Tải Extension về máy</p>
+                <p className="mt-0.5 text-xs text-app-muted">
+                  File .zip chứa toàn bộ Chrome Extension, tải về và giải nén để cài đặt
+                </p>
+              </div>
+              <a
+                href="https://drive.google.com/uc?export=download&id=1UBF3x65b2kntUaGxx76GuTHP1hIdSZJv"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button className="shrink-0">
+                  <Download className="h-4 w-4" />
+                  Tải Extension
+                </Button>
+              </a>
+            </div>
+          </div>
+
           {/* Steps */}
           <div className="mb-6 space-y-3">
             {steps.map((step, index) => {
@@ -134,11 +169,14 @@ export function ExtensionSetupGuide() {
               return (
                 <div key={index} className="flex items-start gap-3">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-blue/10 text-sky-blue">
-                    <Icon className="h-3.5 w-3.5" />
+                    <span className="text-xs font-bold">{index + 1}</span>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-midnight-ink">{step.title}</p>
-                    <p className="text-xs text-app-muted">{step.description}</p>
+                  <div className="flex items-start gap-2">
+                    <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-blue" />
+                    <div>
+                      <p className="text-sm font-medium text-midnight-ink">{step.title}</p>
+                      <p className="text-xs text-app-muted">{step.description}</p>
+                    </div>
                   </div>
                 </div>
               )
