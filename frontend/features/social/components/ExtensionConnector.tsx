@@ -71,12 +71,12 @@ export function ExtensionConnector() {
     // Read token from sessionStorage (set by APITokenCard). If missing —
     // i.e. brand-new user who hasn't visited the token card yet — we
     // generate one transparently so the "1 click to connect" promise holds.
-    let token = sessionStorage.getItem('amplify_api_token')
+    let token: string | null = sessionStorage.getItem('amplify_api_token')
     if (!token) {
       try {
         const res = await fetch('/api/user/api-token', { method: 'POST' })
-        const data = await res.json()
-        if (!res.ok || !data.token) {
+        const data: { token?: string; error?: string } = await res.json()
+        if (!res.ok || typeof data.token !== 'string') {
           throw new Error(data.error || 'Không thể tạo token')
         }
         token = data.token
