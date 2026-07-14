@@ -2,6 +2,14 @@
  * All AI prompt templates used across the application.
  * Separated from business logic for easy iteration and A/B testing.
  *
+ * Updated 15jul 2026:
+ *   - Redesign prompts cho 3 kênh đang bật: x, facebook, threads.
+ *     Tiêu chí người dùng đặt ra: "áp dụng giọng văn với độ dài hợp lí cho mỗi kênh".
+ *     - Đặt persona (Brand Vault) lên PRIORITY #1 ngay đầu mỗi template.
+ *     - Độ dài điều chỉnh theo platform norms 2026 (sweet-spot engagement, không phải ceiling).
+ *     - Thêm "good vs avoid" examples cụ thể để AI bám sát pattern thay vì checklist khô.
+ *     - Cho phép persona override một số ràng buộc channel (giọng văn là trên hết).
+ *
  * Updated 14jul 2026:
  *   - length floor ≥ 150 từ cho FB/Instagram/LinkedIn (user yêu cầu)
  *   - thêm facebook-group + threads (automator đã có, prompt thiếu)
@@ -81,14 +89,41 @@ Slide cuối: CTA + hashtags
 Tổng cộng 8-10 slides.
 Không emoji, giữ chuyên nghiệp.`,
 
-  'facebook': `Yêu cầu:
-Viết một Facebook post casual, kể chuyện, gần gũi.
-Độ dài 200-400 từ.
-Mỗi câu ≥ 8 từ. Tối thiểu 3 đoạn văn (xuống dòng đôi để dễ đọc).
-Có thể dùng emoji một cách tự nhiên (1-3 emoji per post).
-Có hook ở đầu để thu hút attention.
-Kết thúc bằng câu hỏi hoặc CTA nhẹ nhàng.
-1-5 hashtags ở cuối (viết HOA hoặc PascalCase).`,
+  'facebook': `Nguyên tắc cao nhất: GIỌNG VĂN TÁC GIẢ là trên hết. Nếu persona chỉ định tone khác (ví dụ "chuyên gia phân tích"), hãy ưu tiên tone đó — chỉ giữ cấu trúc và độ dài theo channel rules dưới đây.
+
+Viết một Facebook Page post dựa trên bài viết gốc.
+
+### ĐỘ DÀI
+- Sweet-spot 80-150 từ. Feed FB hiển thị tốt nhất trong khoảng này (engagement giảm dần sau 150 từ).
+- Nếu persona hoặc nội dung gốc đòi hỏi storytelling dài hơn, được phép lên 200-300 từ — nhưng PHẢI có dòng ngắt ("\n\n") rõ ràng giữa các đoạn để người đọc quét nhanh.
+
+### CẤU TRÚC (3 phần)
+1. Hook (1-2 dòng đầu): gây tò mò hoặc đánh vào insight — quyết định người đọc có bấm "...xem thêm".
+2. Thân bài: 1 insight chính hoặc 1 câu chuyện nhỏ (1-3 đoạn). Mỗi đoạn 2-3 câu.
+3. CTA nhẹ: 1 câu hỏi hoặc 1 lời mời tương tác.
+
+### GIỌNG VĂN (áp dụng từ Brand Vault)
+- Casual, kể chuyện, như đang nói chuyện với 1 người bạn.
+- Mỗi câu ≥ 8 từ (tránh tweet-style one-liner).
+- Emoji: 1-3 cái, đặt ở đầu/cuối hook — không rải khắp bài.
+
+### PATTERNS NÊN TRÁNH
+- KHÔNG bắt đầu bằng "Tôi", "Chúng ta", "Hôm nay".
+- KHÔNG bullet-list khô khan (3 dấu đầu dòng trở lên trông như slide deck).
+- KHÔNG nhồi keyword bài gốc quá 1 lần / 1 trọng tâm.
+
+### HASHTAG
+- 1-3 hashtag ở cuối (viết HOA hoặc PascalCase, vd #Marketing, #ContentStrategy).
+- Nếu persona nghiêng về giọng bình dân hoặc micro-niche, có thể bỏ hashtag hoàn toàn.
+
+### VÍ DỤ MẪU (không copy, chỉ tham khảo format)
+"Đa số founder Việt đang đốt tiền cho content mà không có chiến lược. Họ đăng đều đặn, nhưng không có hệ thống đo lường. Kết quả là: post nào cũng giống post nào, audience thì ngày càng loãng.
+
+Mình từng rơi vào đúng cái bẫy này. Bài học xương máu: 1 bài viết có chiến lược sẽ ăn đứt 10 bài đăng đều đặn nhưng vô hồn.
+
+Bạn đang đăng đều — hay đăng có chiến lược?
+
+#ContentStrategy #Marketing"`,
 
   'facebook-group': `Yêu cầu:
 Viết một bài đăng cho Facebook Group (cộng đồng).
@@ -106,13 +141,35 @@ Có thể dùng emoji một cách có chọn lọc (1-2 emoji)
 Không hashtag hoặc tối đa 1 hashtag
 Thoại tự nhiên, không quá formal`,
 
-  'x': `Yêu cầu:
-Viết một X post ngắn dưới 280 ký tự.
-Hook gây tò mò hoặc gây debate nhẹ.
-Một insight hoặc opinion rõ ràng.
-Emoji được khuyến khích (1-3 emoji)
-Không hashtag hoặc tối đa 1 hashtag
-Có thể kết thúc bằng một câu hỏi để tăng engagement`,
+  'x': `Nguyên tắc cao nhất: GIỌNG VĂN TÁC GIẢ là trên hết. X là "personality contest" — cùng 1 thông điệp có thể viết 10 cách khác nhau theo 10 persona. Hãy theo persona đến chữ cuối.
+
+Viết 1 X post (single tweet, không phải thread) dựa trên bài viết gốc.
+
+### ĐỘ DÀI (tính theo KÝ TỰ, không phải từ)
+- Tối đa 280 ký tự (giới hạn cứng của X).
+- Sweet-spot 70-130 ký tự — engagement cao nhất rơi vào khoảng này, vì feed X đọc theo "shooting glance" không theo chiều dọc.
+- Nếu nội dung thật sự phức tạp và persona cho phép dài hơn, có thể lên 200-260 ký tự — nhưng phải có 1 punchline mạnh ở cuối.
+
+### CẤU TRÚC
+- 1 insight duy nhất (không nhồi).
+- Hook ở đầu: 5-10 ký tự đầu quyết định người đọc có dừng cuộn hay không.
+- Nếu dùng emoji, chỉ 1-2 cái, đặt ở hook hoặc punchline.
+
+### PATTERNS NÊN DÙNG
+- Format "đảo ngược": câu đầu chốt insight, giải thích ngắn sau.
+- Format "listicle thu nhỏ": gom 3-4 thứ vào 1 dòng phân cách dấu "•" hoặc "→".
+- Format "contrarian": đi ngược số đông, nhưng đừng quá clickbait.
+- Format "story hook": mở đầu bằng 1 câu chuyện cá nhân rồi rút insight.
+
+### PATTERNS NÊN TRÁNH
+- KHÔNG bắt đầu bằng "Tôi nghĩ", "Theo tôi", "Bạn có biết".
+- KHÔNG kết thúc bằng "Thoughts?" hoặc "Agree?" (lazy).
+- KHÔNG hashtag nếu persona không phải dạng broadcast / corporate.
+- KHÔNG bullet-list nhiều dòng — X đọc rất tệ với whitespace dọc.
+
+### VÍ DỤ MẪU (không copy, chỉ tham khảo)
+- "Hot take: Bạn không cần content calendar. Bạn cần 3 bài đủ tốt mỗi tuần. Calendar là để tự lừa mình rằng mình 'đang làm content'."
+- "Mình đã viết 500 bài LinkedIn. Bài hay nhất? Bài 7 từ. Hay nhất = ngắn nhất."`,
 
   'x_thread': `Yêu cầu:
 Viết một X thread gồm 2-4 tweets liên tiếp.
@@ -131,12 +188,47 @@ CTA ở cuối (bình luận / save / share / tag friend).
 8-15 hashtags ở cuối (viết thường, cách nhau dấu cách).
 Có thể dùng line breaks để dễ đọc.`,
 
-  'threads': `Yêu cầu:
-Viết một Threads post (Instagram's text-based social).
-Độ dài: 150-300 từ.
-Tone casual, hội thoại, xu hướng Gen-Z nếu phù hợp.
-Bắt đầu bằng hook trong 1-2 dòng đầu (khiến người đọc phải dừng cuộn).
-Insight chính ở giữa, CTA nhẹ ở cuối.
-2-5 hashtag (không bắt buộc nhưng encouraged).
-Có thể dùng emoji 1-2 cái tự nhiên.`,
+  'threads': `Nguyên tắc cao nhất: GIỌNG VĂN TÁC GIẢ là trên hết. Threads là feed có tính "conversation" cao nhất — người đọc ghét cảm giác đang đọc "press release". Hãy viết như persona đang thoại chứ không phải "đăng bài".
+
+Viết 1 Threads post (Meta's text-first platform, public feed) dựa trên bài viết gốc.
+
+### ĐỘ DÀI (tính theo TỪ, vì Threads có thể dài)
+- Sweet-spot 150-250 từ. Threads 2026 algorithm đẩy bài 100-200 từ lên đầu feed cho người dùng feed thường, và 200-350 từ cho người dùng feed "for you".
+- Được phép lên 350-450 từ nếu persona kể chuyện dài (essayist style) — Threads cho phép đến 500 từ nên chừa buffer.
+- Tối thiểu 80 từ. Dưới 80 từ Threads xử lý như "low-effort" và rank thấp.
+
+### CẤU TRÚC
+1. Hook 1-2 dòng đầu ("scroll-stopper"). Đây là phần quan trọng nhất vì Threads quyết định feed chỉ qua 1-2 dòng đầu.
+2. Thân bài: 1 quan điểm / 1 câu chuyện / 1 takeaway. Mỗi đoạn cách nhau bằng dòng trống.
+3. CTA cực nhẹ ở cuối: 1 câu hỏi hoặc "tag friend", hoặc bỏ qua nếu persona không phù hợp.
+
+### GIỌNG VĂN (áp dụng từ Brand Vault, hơi khác FB ở chỗ Gen-Z friendly hơn)
+- Casual, hội thoại, được phép dùng "mình", "bạn", xưng hô informal.
+- Emoji: 1-3 cái, đặt hook. KHÔNG rải emoji 5-6 cái trong 100 từ (Threads có anti-pattern emoji-spam).
+- Được phép câu ngắn hơn (5-6 từ) — không bắt buộc ≥8 từ/câu như FB.
+- Được phép "line break ngẫu nhiên" — Threads chấp nhận rhythm ngắt quãng.
+
+### HASHTAG
+- 1-3 hashtag tối đa (KHÁC Instagram 8-15). Viết thường hoặc HOA đều được, vd #marketing #content.
+- Nếu persona thuộc dạng "thought leader", hãy bỏ hashtag hoàn toàn — Threads 2026 algorithm giảm reach khi có hashtag quá 3 cái.
+
+### PATTERNS NÊN DÙNG
+- Format "rant-compress": bắt đầu bằng 1 cảm xúc mạnh → thu hẹp dần → 1 insight cuối.
+- Format "polaroid": 1 mẩu cá nhân cụ thể → kéo ra thành bài học.
+- Format "one-liner essay": hook mạnh, không đoạn, xuống 1-2 insight, kết.
+
+### PATTERNS NÊN TRÁNH
+- KHÔNG mở bằng "Bạn ơi", "Mọi người ơi" (Threads karma giảm).
+- KHÔNG kết bằng "Thoughts?", "Agree?", "Repost if..." (nghĩa là đang cố viral explicit).
+- KHÔNG emoji-per-sentence — đặt 1-3 cái ở hook là đủ.
+- KHÔNG chèn link trong thân bài (Threads reach giảm 80% nếu có outbound link).
+
+### VÍ DỤ MẪU (không copy, chỉ tham khảo format)
+"Hôm qua mình đóng cửa 1 dự án 8 tháng. Không phải vì hết tiền. Mà vì mình nhận ra đang xây cho người không tồn tại.
+
+Mình ngồi lại, đọc toàn bộ các comment, tin nhắn, email từ 8 tháng qua.
+
+Kết luận: 80% các kênh mình tưởng 'quan trọng' chỉ là echo chamber của chính mình. Người mua thật đến từ 2 chỗ duy nhất — và 2 chỗ đó mình đã lờ đi vì 'không glam'.
+
+Bài học: data nói dối. Còn khách hàng thật thì không."`,
 }
