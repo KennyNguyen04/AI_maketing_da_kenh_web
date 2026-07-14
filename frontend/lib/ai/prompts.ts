@@ -17,6 +17,9 @@
  *     (62 chars) đạt insight nhưng quá ngắn — sweet-spot chỉ là gợi ý mềm nên
  *     Gemini bỏ qua khi persona analytical/news-style. Hard minimum + hướng dẫn
  *     pad bằng context/punchline/example (không hashtag-spam) để hit ≥ 70 chars.
+ *   - 15jul: siết Facebook sweet-spot 80-150 → 50-90 từ, KHÔNG vượt 120 từ.
+ *     Lý do: user feedback "FB ngắn lại một chút" — output cũ ~110-120 từ/4 đoạn
+ *     dài hơn mức feed FB tối ưu. Ví dụ mẫu cũng cắt gọn để model bám pattern.
  *
  * Updated 14jul 2026:
  *   - length floor ≥ 150 từ cho FB/Instagram/LinkedIn (user yêu cầu)
@@ -102,12 +105,13 @@ Không emoji, giữ chuyên nghiệp.`,
 Viết một Facebook Page post dựa trên bài viết gốc.
 
 ### ĐỘ DÀI
-- Sweet-spot 80-150 từ. Feed FB hiển thị tốt nhất trong khoảng này (engagement giảm dần sau 150 từ).
-- Nếu persona hoặc nội dung gốc đòi hỏi storytelling dài hơn, được phép lên 200-300 từ — nhưng PHẢI có dòng ngắt ("\n\n") rõ ràng giữa các đoạn để người đọc quét nhanh.
+- Sweet-spot 50-90 từ. Feed FB hiển thị tốt nhất trong khoảng này (engagement giảm dần sau 100 từ — người đọc feed FB quét rất nhanh).
+- KHÔNG vượt 120 từ trong mọi trường hợp — kể cả khi persona hoặc nội dung gốc đòi hỏi kể chuyện dài. Nếu source dài, hãy CHỌN 1 insight trọng tâm rồi viết gọn lại.
+- PHẢI có dòng ngắt ("\n\n") giữa hook / body / CTA để người đọc quét nhanh.
 
-### CẤU TRÚC (3 phần)
-1. Hook (1-2 dòng đầu): gây tò mò hoặc đánh vào insight — quyết định người đọc có bấm "...xem thêm".
-2. Thân bài: 1 insight chính hoặc 1 câu chuyện nhỏ (1-3 đoạn). Mỗi đoạn 2-3 câu.
+### CẤU TRÚC (3 phần, giữ gọn)
+1. Hook (1 câu, ≤ 15 từ): gây tò mò hoặc đánh vào insight — quyết định người đọc có bấm "...xem thêm".
+2. Thân bài: 1 insight chính hoặc 1 quan sát ngắn (1 đoạn, 2-3 câu, mỗi câu 8-15 từ).
 3. CTA nhẹ: 1 câu hỏi hoặc 1 lời mời tương tác.
 
 ### GIỌNG VĂN (áp dụng từ Brand Vault)
@@ -124,10 +128,10 @@ Viết một Facebook Page post dựa trên bài viết gốc.
 - 1-3 hashtag ở cuối (viết HOA hoặc PascalCase, vd #Marketing, #ContentStrategy).
 - Nếu persona nghiêng về giọng bình dân hoặc micro-niche, có thể bỏ hashtag hoàn toàn.
 
-### VÍ DỤ MẪU (không copy, chỉ tham khảo format)
-"Đa số founder Việt đang đốt tiền cho content mà không có chiến lược. Họ đăng đều đặn, nhưng không có hệ thống đo lường. Kết quả là: post nào cũng giống post nào, audience thì ngày càng loãng.
+### VÍ DỤ MẪU (không copy, chỉ tham khảo format — mục tiêu 50-90 từ)
+"Đa số founder Việt đang đốt tiền cho content mà không có chiến lược. Đăng đều đặn, nhưng không đo lường — kết quả là post nào cũng giống post nào, audience ngày càng loãng.
 
-Mình từng rơi vào đúng cái bẫy này. Bài học xương máu: 1 bài viết có chiến lược sẽ ăn đứt 10 bài đăng đều đặn nhưng vô hồn.
+Mình từng rơi vào đúng cái bẫy này. 1 bài có chiến lược ăn đứt 10 bài đăng đều nhưng vô hồn.
 
 Bạn đang đăng đều — hay đăng có chiến lược?
 

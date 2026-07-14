@@ -49,10 +49,12 @@ export const AI_GENERATION_CONFIG: Record<string, GenerationConfig> = {
     topK: 40,
   },
 
-  // Facebook - casual, storytelling. Tăng temperature + maxTokens cho 200-400 từ + ≥ 3 đoạn văn.
+  // Facebook - casual, storytelling. maxTokens dùng cho persona muốn dài,
+  // nhưng prompt đã siết sweet-spot 50-90 từ + KHÔNG vượt 120 từ (15jul 2026:
+  // user yêu cầu FB ngắn lại — trước đó output dài 110-120 từ/4 đoạn).
   facebook: {
-    temperature: 0.85, // was 0.75
-    maxTokens: 3500,   // was 2500
+    temperature: 0.85,
+    maxTokens: 3500,
     topP: 0.95,
     topK: 40,
   },
