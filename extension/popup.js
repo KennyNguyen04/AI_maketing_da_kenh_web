@@ -37,9 +37,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     setConnected(true);
     showMainUI();
     await loadStats();
+    // Self-heal: make sure server knows this extension instance is
+    // bound to this account. The token might have been saved by an
+    // older version of the extension, an older popup manual flow that
+    // forgot to call /register, or by a content-script path that errored
+    // out mid-way. Without this, /api/extension/health would keep
+    // reporting registered=false, and the web app's setup-guide badge
+    // would stay orange even though the popup itself shows connected.
+    await selfRegisterIfStale(stored.api_token, stored.api_base);
   } else {
     setConnected(false);
     showMainUI();
+  }
+
+  // Self-heal helper: re-POST /api/extension/register if we haven't done
+  // it for the current token in the last 6 hours. The long cooldown is
+  // intentional — registration is idempotent at the user_metadata level,
+  // but we don't want to make a network call on every popup open.
+  async function selfRegisterIfStale(token, apiBase) {
+    if (!token || !apiBase) return;
+    const cleanBase = String(apiBase).replace(/\/+$/, '');
+    try {
+      const { lastSelfRegisterAt } = await chrome.storage.local.get(['lastSelfRegisterAt']);
+      const SIX_HOURS = 6 * 60 * 60 * 1000;
+      if (lastSelfRegisterAt && Date.now() - Number(lastSelfRegisterAt) < SIX_HOURS) {
+        return; // already synced recently
+      }
+      const res = await fetch(`${cleanBase}/api/extension/register`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        await chrome.storage.local.set({ lastSelfRegisterAt: Date.now() });
+        // Best-effort notify any open settings tab to refresh its badge
+        // immediately rather than waiting for the 30s poll.
+        try {
+          chrome.tabs.query({ url: `${cleanBase}/*` }, (tabs) => {
+            (tabs || []).forEach((t) => {
+              chrome.tabs
+                .sendMessage(t.id, { type: 'AMPLIFY_TOKEN_SAVED' })
+                .catch(() => {});
+            });
+          });
+        } catch (_) { /* chrome.tabs API may be unavailable in some contexts */ }
+      }
+    } catch (_) { /* non-fatal — badge will catch up on next 30s poll */ }
   }
 
   // Read last-known state synchronously from session storage. This is the

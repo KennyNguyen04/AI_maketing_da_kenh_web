@@ -33,6 +33,18 @@ document.documentElement.setAttribute(
   chrome.runtime.getManifest().version
 );
 
+// React to two kinds of registration events:
+//   1. self-initiated — the SPA posts AMPLIFY_SEND_TOKEN, we save it and
+//      re-broadcast AMPLIFY_TOKEN_SAVED (handled below in the listener).
+//   2. popup-initiated — the user paste-saved in the popup directly. The
+//      popup calls /register and then sends us a chrome.runtime message
+//      with type=AMPLIFY_TOKEN_SAVED so the SPA can refresh its badge
+//      without waiting for the 30s poll.
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.type !== 'AMPLIFY_TOKEN_SAVED') return;
+  window.postMessage({ type: 'AMPLIFY_TOKEN_SAVED' }, window.location.origin);
+});
+
 window.addEventListener('message', (event) => {
   if (!TRUSTED_PAGE_ORIGINS.includes(event.origin)) {
     log('Ignored message from untrusted origin:', event.origin);
