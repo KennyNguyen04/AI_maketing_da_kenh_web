@@ -3,6 +3,7 @@ import { SocialAccountsSettings } from '@/features/social/components/SocialAccou
 import { SocialTargetsSettings } from '@/features/social/components/SocialTargetsSettings'
 import { APITokenCard } from '@/features/social/components/APITokenCard'
 import { ExtensionSettingsForm } from '@/features/social/components/ExtensionSettingsForm'
+import { ExtensionConnector } from '@/features/social/components/ExtensionConnector'
 
 export default function SettingsPage() {
   return (
@@ -15,6 +16,7 @@ export default function SettingsPage() {
         </p>
       </header>
       <APITokenCard />
+      <ExtensionConnector />
       <ExtensionSetupGuide />
       <ExtensionSettingsForm />
       <SocialAccountsSettings />

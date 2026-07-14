@@ -504,33 +504,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // older than 5 minutes) back to pending BEFORE we poll. Without this, a
     // stale processing task would block the queue forever — the next poll
     // sees it as "already claimed" and skips it.
-    const local = await chrome.storage.local.get(['api_token', 'api_base']);
-    if (local.api_token && local.api_base) {
+    (async () => {
       try {
-        const res = await fetch(`${local.api_base}/api/extension/resync`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${local.api_token}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.reset_count > 0) {
-            console.log(`[Amplify] Resync: reset ${data.reset_count} stale processing task(s) → pending`);
-            // Surface to popup so user sees "🔄 Reset N task kẹt" within 30s.
-            await chrome.storage.local.set({
-              lastResync: { at: Date.now(), resetCount: data.reset_count },
+        const local = await chrome.storage.local.get(['api_token', 'api_base']);
+        if (local.api_token && local.api_base) {
+          try {
+            const res = await fetch(`${local.api_base}/api/extension/resync`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${local.api_token}`,
+              },
             });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.reset_count > 0) {
+                console.log(`[Amplify] Resync: reset ${data.reset_count} stale processing task(s) → pending`);
+                // Surface to popup so user sees "🔄 Reset N task kẹt" within 30s.
+                await chrome.storage.local.set({
+                  lastResync: { at: Date.now(), resetCount: data.reset_count },
+                });
+              }
+            }
+          } catch (e) {
+            // Best-effort: resync failure shouldn't block the manual scan.
+            console.warn('[Amplify] resync call failed:', e.message);
           }
         }
+        await chrome.storage.local.remove(PROCESSING_KEY);
+        await pollAndProcessTask();
       } catch (e) {
-        // Best-effort: resync failure shouldn't block the manual scan.
-        console.warn('[Amplify] resync call failed:', e.message);
+        console.error('[Amplify] forceScan error:', e);
       }
-    }
-    chrome.storage.local.remove(PROCESSING_KEY).then(() => pollAndProcessTask());
-    sendResponse({ success: true });
+      sendResponse({ success: true });
+    })();
+    return true; // keep channel open for async sendResponse
 
   } else if (message.action === 'confirmPreview') {
     // User clicked "Đăng ngay" — clear preview state and continue processing this task.

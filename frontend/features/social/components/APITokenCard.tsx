@@ -37,6 +37,11 @@ export function APITokenCard() {
       if (data.token) {
         setToken(data.token)
         setHasToken(true)
+        try {
+          sessionStorage.setItem('amplify_api_token', data.token)
+        } catch {
+          // ignore
+        }
       } else {
         setHasToken(false)
       }
@@ -65,6 +70,14 @@ export function APITokenCard() {
         setHasToken(true)
         setShowToken(true)
         setIsNew(true)
+        // Stash for ExtensionConnector to pick up via window.postMessage.
+        // We deliberately use sessionStorage (cleared on tab close) so the
+        // token never lingers in a way that survives logout.
+        try {
+          sessionStorage.setItem('amplify_api_token', data.token)
+        } catch {
+          // sessionStorage may be unavailable (private mode quirks) — ignore.
+        }
       }
     } catch (e) {
       console.error('Failed to generate token:', e)
@@ -91,12 +104,19 @@ export function APITokenCard() {
       if (!res.ok) {
         throw new Error(data.error || 'Không thể thu hồi token')
       }
-      setToken(null)
-      setHasToken(false)
-      setIsNew(false)
-      setShowToken(false)
-      setConfirmRevoke(false)
-      setRevokeMessage('Đã thu hồi token. Extension đang dùng token cũ sẽ ngừng hoạt động ngay lập tức.')
+setToken(null)
+        setHasToken(false)
+        setIsNew(false)
+        setShowToken(false)
+        setConfirmRevoke(false)
+        try {
+          sessionStorage.removeItem('amplify_api_token')
+        } catch {
+          // ignore
+        }
+        // Tell extension to drop the cached token too.
+        window.postMessage({ type: 'AMPLIFY_CLEAR_TOKEN' }, window.location.origin)
+        setRevokeMessage('Đã thu hồi token. Extension đang dùng token cũ sẽ ngừng hoạt động ngay lập tức.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể thu hồi token')
     } finally {

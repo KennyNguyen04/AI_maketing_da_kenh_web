@@ -258,11 +258,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveBtn.textContent = 'Đang kết nối...';
 
     // Try multiple possible API endpoints.
+    // Normalize: strip trailing slash so we don't get //api double-slash.
+    const normalizeUrl = (u) => (u || '').replace(/\/+$/, '');
+    const candidate = normalizeUrl(apiBase);
     const possibleUrls = [
-      apiBase,
-      apiBase.replace(':3001', ':3000'),
-      apiBase.replace(':3000', ':3001'),
-      'https://amplifyhd.tech/',
+      candidate,
+      candidate.replace(':3001', ':3000'),
+      candidate.replace(':3000', ':3001'),
+      'https://amplifyhd.tech',
       'http://localhost:3001',
       'http://localhost:3000',
     ];
@@ -297,6 +300,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           break;
         } else if (response.status === 401) {
           lastError = 'Token không hợp lệ';
+        } else {
+          lastError = `HTTP ${response.status}`;
         }
       } catch (e) {
         lastError = e.message;

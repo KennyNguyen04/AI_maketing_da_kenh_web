@@ -34,13 +34,21 @@
   },
   "content_scripts": [
     {
-      "js": ["content/inject.js", "lib/boostrap.js"],
+      "js": ["content/inject.js"],
       "matches": [
         "https://www.facebook.com/*",
         "https://www.instagram.com/*",
         "https://www.threads.net/*"
       ],
       "run_at": "document_start"
+    },
+    {
+      "js": ["content/web-bridge.js"],
+      "matches": [
+        "https://amplifyhd.tech/*",
+        "https://www.amplifyhd.tech/*"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "icons": {
