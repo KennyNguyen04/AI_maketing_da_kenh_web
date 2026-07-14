@@ -245,6 +245,19 @@
     </div>
   </div>
 
+  <!-- Debug Log — hiển thị 8 dòng log cuối từ automator.
+       Popup chỉ show khi user mở rộng, tránh chiếm chỗ khi không cần. -->
+  <div class="section" id="log-section" style="display:none;">
+    <div class="section-title" id="log-toggle" style="cursor:pointer;user-select:none;">
+      🪵 Log gần đây (bấm để ẩn/hiện) <span id="log-toggle-icon">▼</span>
+    </div>
+    <div id="log-list" style="font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto;background:#0f172a;color:#cbd5e1;padding:8px;border-radius:6px;line-height:1.5;"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="log-copy-btn" style="font-size:11px;padding:4px 8px;">📋 Copy log</button>
+      <button class="btn btn-ghost" id="log-clear-btn" style="font-size:11px;padding:4px 8px;">🗑️ Xóa log</button>
+    </div>
+  </div>
+
   <!-- Stats -->
   <div class="section" id="stats-section" style="display:none;">
     <div class="section-title">Tiến độ đăng bài</div>

@@ -248,27 +248,112 @@ document.addEventListener('DOMContentLoaded', async () => {
       tokenExpired: d.tokenExpired,
       lastResync: d.lastResync,
     });
+    // Refresh log panel concurrently (cheap, separate code path).
+    refreshLogPanel();
   }
 
-  // ─── Event-driven updates ───
+  // ─── Amplify log buffer (debug aid) ───
   //
-  // Background broadcasts 'bgPostState' on every storage change. We listen
-  // for those and refresh instantly, removing the 1s polling lag. We still
-  // keep a slower interval (3s) for the countdown timer ('Chờ bài lúc …')
-  // which needs to tick continuously.
+  // threads.js (and other automators) append entries to chrome.storage.local['amplifyLog'].
+  // We mirror the last 8 lines into the popup so user can diagnose stuck posts
+  // without opening DevTools. Panel starts collapsed — only the toggle reveals it.
+  const LOG_KEY = 'amplifyLog';
+  const LOG_DISPLAY_COUNT = 8;
+
+  async function refreshLogPanel() {
+    const list = document.getElementById('log-list');
+    if (!list) return;
+    try {
+      const cur = await chrome.storage.local.get(LOG_KEY);
+      const arr = Array.isArray(cur[LOG_KEY]) ? cur[LOG_KEY] : [];
+      // Show only the last N entries, newest at bottom.
+      const slice = arr.slice(-LOG_DISPLAY_COUNT);
+      if (slice.length === 0) {
+        list.innerHTML = '<div style="color:#64748b;">(chưa có log nào)</div>';
+        return;
+      }
+      list.innerHTML = slice.map((e) => {
+        const ts = new Date(e.ts || Date.now()).toLocaleTimeString('vi-VN', { hour12: false });
+        // Red highlight cho lỗi / nghi vấn, còn lại giữ default.
+        const isErr = /❌|error|lỗi|fail/i.test(e.msg || '');
+        const color = isErr ? '#fca5a5' : '#cbd5e1';
+        return `<div style="color:${color};"><span style="color:#64748b;">${ts}</span> [${e.channel || '?'}] ${escapeHtml(e.msg || '')}</div>`;
+      }).join('');
+      // Auto-scroll to bottom so user sees latest entry.
+      list.scrollTop = list.scrollHeight;
+
+      // Reveal section if there are recent (last 60s) entries — useful signal that something is happening.
+      const hasRecent = arr.some((e) => Date.now() - (e.ts || 0) < 60_000);
+      const section = document.getElementById('log-section');
+      if (section) section.style.display = hasRecent ? '' : 'none';
+    } catch (_) { /* graceful */ }
+  }
+
+  // Hook log refresh vào broadcast 'bgPostState' để update ngay khi
+  // automator vừa push log mới — không cần đợi tick interval.
   chrome.runtime.onMessage.addListener((msg) => {
     if (!msg) return;
     if (msg.action === 'bgPostState') {
-      // Force refresh from storage.local — the actual data is there, not
-      // in the broadcast payload (background sends only the changed ref).
       refreshFromStorage();
+      refreshLogPanel();
     }
   });
 
-  // 3-second tick is enough to update the countdown text. The status only
-  // changes when the background fires bgPostState (start/end of task), so
-  // polling chrome.storage.local every 1s was burning IPC budget for no
-  // visible change. Storage.session still gets the latest on every tick.
+  // Wire up log panel controls.
+  function setupLogControls() {
+    const toggle = document.getElementById('log-toggle');
+    const list = document.getElementById('log-list');
+    const icon = document.getElementById('log-toggle-icon');
+    const copyBtn = document.getElementById('log-copy-btn');
+    const clearBtn = document.getElementById('log-clear-btn');
+    if (!toggle || !list) return;
+
+    toggle.addEventListener('click', () => {
+      const hidden = list.style.display === 'none';
+      list.style.display = hidden ? '' : 'none';
+      if (icon) icon.textContent = hidden ? '▼' : '▶';
+    });
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const cur = await chrome.storage.local.get(LOG_KEY);
+        const arr = Array.isArray(cur[LOG_KEY]) ? cur[LOG_KEY] : [];
+        const text = arr.map((e) => {
+          const ts = new Date(e.ts || Date.now()).toISOString().slice(11, 19);
+          return `[${ts}] [${e.channel}] ${e.msg}`;
+        }).join('\n');
+        try {
+          await navigator.clipboard.writeText(text);
+          copyBtn.textContent = '✅ Đã copy';
+          setTimeout(() => { copyBtn.textContent = '📋 Copy log'; }, 1500);
+        } catch (_) {
+          // Fallback: select text in a textarea.
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); } catch (_) {}
+          document.body.removeChild(ta);
+        }
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', async () => {
+        await chrome.storage.local.set({ [LOG_KEY]: [] });
+        refreshLogPanel();
+      });
+    }
+  }
+  setupLogControls();
+
+  // ─── Event-driven updates ───
+  //
+  // Background broadcasts 'bgPostState' on every storage change. The
+  // listener installed in the log panel setup above (refreshFromStorage +
+  // refreshLogPanel) handles both state + log refresh. We still keep a
+  // slower interval (3s) for the countdown timer ('Chờ bài lúc …')
+  // which needs to tick continuously.
   setInterval(() => {
     refreshFromStorage();
   }, 3000);
