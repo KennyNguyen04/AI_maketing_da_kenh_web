@@ -6,6 +6,9 @@ export const CHANNEL_LIMITS: Record<Channel, number | null> = {
   facebook: 63206,
   twitter: 280,
   x: 280,
+  // Threads cap mirrors X — text-first platform, no separate cap yet.
+  // Added 2026-07-15 when Threads was promoted to NewJobForm channel.
+  threads: 500,
 }
 
 export const CHANNEL_LABELS: Record<Channel, string> = {
@@ -14,6 +17,7 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
   facebook: 'Facebook',
   twitter: 'X / Twitter',
   x: 'X / Twitter',
+  threads: 'Threads',
 }
 
 export const STATUS_LABELS: Record<JobStatus, { vi: string; en: string }> = {

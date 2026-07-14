@@ -10,6 +10,7 @@ const channelPills: Record<string, string> = {
   linkedin_thread: 'Thread',
   facebook: 'Facebook',
   twitter: 'X',
+  threads: 'Threads',
 }
 
 function formatDate(dateStr: string) {

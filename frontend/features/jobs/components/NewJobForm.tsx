@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Check, Facebook, Fingerprint, Linkedin, Link2, Plus, Twitter } from 'lucide-react'
+import { Check, Facebook, Fingerprint, Linkedin, Link2, MessageCircle, Plus, Twitter } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Channel } from '@/lib/types'
 import { Button } from '@/components/ui/Button'
@@ -14,14 +14,16 @@ import { Toast } from '@/components/ui/Toast'
 import { JobStatusPoller } from './JobStatusPoller'
 import { createClient } from '@/lib/supabase/client'
 
-// Ẩn LinkedIn khỏi form (giữ type Channel vì DB có draft cũ).
-// User yêu cầu 2026-07-14: chỉ cho phép kênh có automator.
-// LinkedIn sẽ được build sau khi có fb-group + threads ổn định.
-// Draft LinkedIn cũ vẫn hiển thị trong /history và /scheduler (xem QueueList filter).
+// Ẩn LinkedIn, fb-group, instagram khỏi form (giữ type Channel vì DB có draft cũ).
+// Threads đã có automator + AI prompt/config → bật cho user 2026-07-15.
+// LinkedIn / fb-group / Instagram sẽ được bật sau khi ổn định.
+// Draft cũ của các kênh ẩn vẫn hiển thị trong /history và /scheduler
+// (xem QueueList filter cho LinkedIn).
 const channelOptions: { id: Channel; icon: typeof Linkedin; label: string; description: string }[] = [
   { id: 'facebook', icon: Facebook, label: 'Facebook Page', description: 'Bài kể chuyện 200-400 từ' },
   { id: 'twitter', icon: Twitter, label: 'X', description: 'Bản ngắn dưới 280 ký tự' },
-]
+  { id: 'threads', icon: MessageCircle, label: 'Threads', description: 'Casual, Gen-Z, 150-300 từ' },
+] 
 
 interface Vault {
   id: string

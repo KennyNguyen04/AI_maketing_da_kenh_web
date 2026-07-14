@@ -22,11 +22,12 @@ describe('validation/api: VALID_CHANNELS canonical check', () => {
     expect(VALID_CHANNELS).not.toContain('twitter')
   })
 
-  it('contains all 4 canonical channels', () => {
-    expect(VALID_CHANNELS).toHaveLength(4)
+  it('contains all 5 canonical channels (2026-07-15: +threads)', () => {
+    expect(VALID_CHANNELS).toHaveLength(5)
     expect(VALID_CHANNELS).toContain('linkedin_post')
     expect(VALID_CHANNELS).toContain('linkedin_thread')
     expect(VALID_CHANNELS).toContain('facebook')
+    expect(VALID_CHANNELS).toContain('threads')
   })
 })
 
@@ -97,8 +98,8 @@ describe('validateChannels', () => {
     expect(() => validateChannels(['tiktok'])).toThrow(/tiktok.*invalid/i)
   })
 
-  it('accepts all 4 canonical channels together', () => {
-    expect(validateChannels(['x', 'facebook', 'linkedin_post', 'linkedin_thread'])).toHaveLength(4)
+  it('accepts all 5 canonical channels together', () => {
+    expect(validateChannels(['x', 'facebook', 'linkedin_post', 'linkedin_thread', 'threads'])).toHaveLength(5)
   })
 })
 

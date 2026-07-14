@@ -1,8 +1,12 @@
 import type { Channel, SourceType } from '@/lib/types'
 
-// Canonical channels: 'linkedin_post'/'linkedin_thread'/'facebook'/'x'
+// Canonical channels: 'linkedin_post'/'linkedin_thread'/'facebook'/'x'/'threads'
+// 'threads' added 2026-07-15 (matches migration 023 + lib/types Channel).
 // 'twitter' is accepted as an alias for 'x' (deprecated). Validation normalises it.
-export const VALID_CHANNELS: Channel[] = ['linkedin_post', 'linkedin_thread', 'facebook', 'x']
+export const VALID_CHANNELS: Channel[] = ['linkedin_post', 'linkedin_thread', 'facebook', 'x', 'threads']
+// Pinned (5 channels) instead of 'facebook-group' / 'instagram' — those
+// channels have automators but are not wired into NewJobForm yet.
+
 export const DEPRECATED_CHANNEL_ALIASES: Record<string, Channel> = {
   twitter: 'x',
 }
